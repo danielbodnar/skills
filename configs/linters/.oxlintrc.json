@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "rules": {
+    "correctness": "error",
+    "suspicious": "error",
+    "style": "warn",
+    "pedantic": "warn",
+    "typescript": "all",
+    "no-unused-vars": "error",
+    "no-console": "warn",
+    "eqeqeq": "error",
+    "no-var": "error",
+    "prefer-const": "error"
+  },
+  "fix": true,
+  "import-plugin": true,
+  "jsdoc-plugin": true,
+  "node-plugin": true,
+  "overrides": [
+    {
+      "files": ["*.test.ts", "*.spec.ts", "**/__tests__/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "build",
+    ".wrangler",
+    "coverage"
+  ]
+}

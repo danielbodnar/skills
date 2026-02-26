@@ -1,0 +1,53 @@
+{
+  "name": "skills",
+  "version": "1.0.0",
+  "description": "CLI tool for managing a Claude Code skills marketplace and plugin collection",
+  "type": "module",
+  "bin": {
+    "skills": "./dist/skills"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/lib/schema.ts"
+  },
+  "imports": {
+    "#commands/*": "./src/commands/*",
+    "#lib/*": "./src/lib/*"
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build --compile --outfile ./dist/skills src/index.ts",
+    "test": "bun test",
+    "lint": "bunx oxlint src/",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "effect": "latest"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  },
+  "author": {
+    "name": "Daniel Bodnar",
+    "email": "daniel.bodnar@gmail.com",
+    "url": "https://github.com/danielbodnar"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danielbodnar/skills.git"
+  },
+  "keywords": [
+    "claude-code",
+    "skills",
+    "marketplace",
+    "plugins",
+    "cli"
+  ]
+}

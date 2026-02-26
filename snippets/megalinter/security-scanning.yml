@@ -1,0 +1,439 @@
+# MegaLinter Security-Focused Configuration Examples
+
+# === Security-Only Configuration ===
+# File: .mega-linter-security.yml
+APPLY_FIXES: none                # Don't auto-fix security issues
+DEFAULT_BRANCH: main
+FILEIO_REPORTER: true
+SHOW_ELAPSED_TIME: true
+PARALLEL: true
+
+# Enable only security linters
+ENABLE_LINTERS:
+  - REPOSITORY_TRUFFLEHOG        # Secrets detection
+  - REPOSITORY_SEMGREP           # Security analysis
+  - REPOSITORY_CHECKOV           # Infrastructure security
+  - PYTHON_BANDIT               # Python security
+  - JAVASCRIPT_ES               # ESLint security rules
+  - DOCKERFILE_HADOLINT         # Docker security
+  - YAML_YAMLLINT               # YAML validation
+  - JSON_JSONLINT               # JSON validation
+
+# Security-specific settings
+REPOSITORY_TRUFFLEHOG_ARGUMENTS: "--exclude-paths .trufflehogignore --no-verification"
+REPOSITORY_SEMGREP_ARGUMENTS: "--config=auto --timeout=300"
+REPOSITORY_CHECKOV_ARGUMENTS: "--framework all --quiet"
+PYTHON_BANDIT_ARGUMENTS: "-r . -ll"
+DOCKERFILE_HADOLINT_ARGUMENTS: "--failure-threshold error"
+
+# Enable SARIF reporting for security tools
+SARIF_REPORTER: true
+JSON_REPORTER: true
+REPORTERS:
+  - console
+  - sarif
+  - json
+
+# Exclude test files from security scanning
+FILTER_REGEX_EXCLUDE: "(test/|spec/|__tests__/|node_modules/|\\.git/)"
+
+---
+# === TruffleHog Configuration ===
+# File: .trufflehogignore
+
+# Ignore test files and mock data
+test/**
+tests/**
+spec/**
+__tests__/**
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+mock/**
+mocks/**
+fixtures/**
+__fixtures__/**
+
+# Ignore documentation
+README.md
+CHANGELOG.md
+docs/**
+*.md
+
+# Ignore configuration examples
+examples/**
+samples/**
+
+# Ignore build outputs
+dist/**
+build/**
+target/**
+bin/**
+
+# Ignore dependency files
+node_modules/**
+vendor/**
+.venv/**
+venv/**
+
+# Ignore specific patterns that are safe
+# Example: ignore UUID patterns in config files
+config/*.json:uuid
+*.json:example_key_12345
+
+---
+# === Semgrep Custom Rules ===
+# File: .semgrep.yml
+rules:
+  # Detect hardcoded secrets
+  - id: hardcoded-password
+    pattern-either:
+      - pattern: password = "..."
+      - pattern: PASSWORD = "..."
+      - pattern: secret = "..."
+      - pattern: SECRET = "..."
+    message: |
+      Hardcoded password/secret detected. Use environment variables or secure vaults instead.
+    languages: [python, javascript, typescript, java, go]
+    severity: ERROR
+    metadata:
+      category: security
+      technology: [secrets]
+      confidence: HIGH
+
+  - id: sql-injection-risk
+    pattern-either:
+      - pattern: |
+          execute("SELECT * FROM ... WHERE ... = " + $VAR)
+      - pattern: |
+          query("... WHERE ... = " + $VAR)
+      - pattern: |
+          $DB.raw("... WHERE ... = " + $VAR)
+    message: |
+      Potential SQL injection vulnerability. Use parameterized queries instead.
+    languages: [python, javascript, typescript, java]
+    severity: ERROR
+    metadata:
+      category: security
+      technology: [sql]
+      confidence: HIGH
+
+  - id: xss-innerHTML
+    pattern-either:
+      - pattern: |
+          $ELEMENT.innerHTML = $VAR
+      - pattern: |
+          $ELEMENT.outerHTML = $VAR
+    message: |
+      Potential XSS vulnerability. Sanitize user input or use textContent instead.
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      technology: [web]
+      confidence: MEDIUM
+
+  - id: unsafe-eval
+    pattern-either:
+      - pattern: eval($VAR)
+      - pattern: Function($VAR)
+      - pattern: setTimeout($VAR, ...)
+      - pattern: setInterval($VAR, ...)
+    message: |
+      Use of eval() or similar dynamic code execution. This can lead to code injection.
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      technology: [javascript]
+      confidence: HIGH
+
+  - id: weak-crypto
+    pattern-either:
+      - pattern: |
+          hashlib.md5(...)
+      - pattern: |
+          hashlib.sha1(...)
+      - pattern: |
+          crypto.createHash('md5')
+      - pattern: |
+          crypto.createHash('sha1')
+    message: |
+      Weak cryptographic hash function. Use SHA-256 or stronger algorithms.
+    languages: [python, javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      technology: [crypto]
+      confidence: HIGH
+
+  - id: insecure-random
+    pattern-either:
+      - pattern: |
+          random.random()
+      - pattern: |
+          Math.random()
+      - pattern: |
+          Random()
+    message: |
+      Insecure random number generation. Use cryptographically secure alternatives.
+    languages: [python, javascript, typescript, java]
+    severity: WARNING
+    metadata:
+      category: security
+      technology: [crypto]
+      confidence: MEDIUM
+
+---
+# === Bandit Configuration for Python Security ===
+# File: .bandit
+[bandit]
+# Exclude test directories
+exclude_dirs = ["*/tests/*", "*/test/*", "*/venv/*", "*/.venv/*"]
+
+# Skip specific tests
+skips = [
+    "B101",  # assert_used - Skip for test files
+    "B601",  # paramiko_calls - Skip if using paramiko legitimately
+]
+
+# Test-specific configuration
+[bandit.assert_used]
+exclude_dirs = ["*/tests/*", "*/test/*"]
+
+[bandit.hardcoded_password_string]
+# Ignore test passwords
+exclude_dirs = ["*/tests/*", "*/test/*", "*/fixtures/*"]
+
+---
+# === Checkov Configuration for Infrastructure Security ===
+# File: .checkov.yml
+# Global settings
+compact: true
+quiet: true
+framework:
+  - dockerfile
+  - kubernetes
+  - terraform
+  - cloudformation
+  - arm
+  - bicep
+  - helm
+  - github_actions
+
+# Skip specific checks
+skip-check:
+  - CKV_DOCKER_2    # Health check instruction
+  - CKV_DOCKER_3    # User instruction
+  - CKV2_GHA_1      # Token permissions
+
+# Custom checks directory
+external-checks-dir:
+  - ./custom-checks
+
+# Output formats
+output:
+  - cli
+  - sarif
+  - json
+
+# Severity threshold
+soft-fail: true
+hard-fail-on:
+  - HIGH
+  - CRITICAL
+
+---
+# === GitHub Actions Security Workflow ===
+# File: .github/workflows/security-scan.yml
+name: Security Scan
+
+on:
+  # Run on schedule (weekly)
+  schedule:
+    - cron: '0 2 * * 1'  # Monday at 2 AM UTC
+  
+  # Run on pushes to main
+  push:
+    branches: [main]
+  
+  # Run on pull requests
+  pull_request:
+    branches: [main]
+  
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: MegaLinter Security Scan
+        id: ml
+        uses: oxsecurity/megalinter@v8
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Enable only security linters
+          ENABLE_LINTERS: |
+            REPOSITORY_TRUFFLEHOG,
+            REPOSITORY_SEMGREP,
+            REPOSITORY_CHECKOV,
+            PYTHON_BANDIT,
+            DOCKERFILE_HADOLINT
+          
+          # Security-specific settings
+          REPOSITORY_TRUFFLEHOG_ARGUMENTS: "--exclude-paths .trufflehogignore --no-verification"
+          REPOSITORY_SEMGREP_ARGUMENTS: "--config=auto --timeout=300 --severity=WARNING"
+          REPOSITORY_CHECKOV_ARGUMENTS: "--framework all --quiet --soft-fail"
+          PYTHON_BANDIT_ARGUMENTS: "-r . -ll -f json"
+          
+          # Enable SARIF output
+          SARIF_REPORTER: true
+          JSON_REPORTER: true
+          FILEIO_REPORTER: true
+          
+          # Performance settings
+          PARALLEL: true
+          SHOW_ELAPSED_TIME: true
+
+      - name: Upload SARIF file to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: success() || failure()
+        with:
+          sarif_file: megalinter-reports/megalinter-report.sarif
+          category: "MegaLinter Security Scan"
+
+      - name: Upload Security Reports
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            megalinter-reports
+            mega-linter.log
+          retention-days: 90
+
+      - name: Create Security Issue
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Security Issues Detected by MegaLinter',
+              body: `
+              Security scan has detected potential issues in the codebase.
+              
+              **Scan Details:**
+              - Run: ${{ github.run_id }}
+              - Commit: ${{ github.sha }}
+              - Date: ${{ github.event.head_commit.timestamp }}
+              
+              Please review the [security scan results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) and address any critical issues.
+              
+              **Next Steps:**
+              1. Review the SARIF results in the Security tab
+              2. Check the artifacts for detailed reports
+              3. Fix any critical or high-severity issues
+              4. Re-run the security scan to verify fixes
+              `,
+              labels: ['security', 'bug', 'high-priority']
+            });
+
+---
+# === Docker Security Scanning ===
+# File: .hadolint.yaml
+failure-threshold: warning
+format: sarif
+
+# Security-focused rules
+ignored:
+  - DL3008  # Pin versions in apt get install (security consideration)
+  - DL3009  # Delete apt-get lists (security best practice)
+
+# Stricter security checks
+override:
+  error:
+    - DL3000  # Use absolute WORKDIR
+    - DL3002  # Switch to non-root USER
+    - DL3020  # Use COPY instead of ADD
+    - DL3025  # Use JSON array format for CMD and ENTRYPOINT
+    - DL4001  # Either use Wget or Curl but not both
+    - DL4006  # Set SHELL option -o pipefail
+
+  warning:
+    - DL3001  # Pipe without -o pipefail
+    - DL3003  # Use WORKDIR to switch to a directory
+    - DL3007  # Using latest is prone to errors
+    - DL3016  # Pin versions in npm
+    - DL3018  # Pin versions in apk add
+    - DL3019  # Use --no-cache switch
+
+# Trusted registries (security consideration)
+trustedRegistries:
+  - docker.io
+  - gcr.io
+  - quay.io
+  - registry.hub.docker.com
+
+---
+# === Kubernetes Security Configuration ===
+# File: .kube-score.yaml
+# Enable security-focused checks
+ignore-tests:
+  # Allow these for development
+  - pod-networkpolicy
+  - ingress-targets-service
+  
+# Security-critical tests (never ignore)
+critical-tests:
+  - container-security-context-privileged
+  - container-security-context-readonlyrootfilesystem
+  - container-security-context-user-group-id
+  - container-resources
+  - pod-probes
+  - service-targets-pod
+
+---
+# === Multi-Stage Security Pipeline ===
+# Example for comprehensive security scanning
+
+# Stage 1: Fast Security Checks
+fast-security:
+  ENABLE_LINTERS:
+    - REPOSITORY_TRUFFLEHOG
+    - DOCKERFILE_HADOLINT
+  PARALLEL: true
+  TIMEOUT: 300
+
+# Stage 2: Deep Security Analysis (if fast checks pass)
+deep-security:
+  ENABLE_LINTERS:
+    - REPOSITORY_SEMGREP
+    - REPOSITORY_CHECKOV
+    - PYTHON_BANDIT
+  TIMEOUT: 1800
+  REPOSITORY_SEMGREP_ARGUMENTS: "--config=p/security-audit --config=p/owasp-top-ten"
+
+# Stage 3: Infrastructure Security (for infrastructure changes)
+infrastructure-security:
+  ENABLE_LINTERS:
+    - REPOSITORY_CHECKOV
+    - TERRAFORM_TFLINT
+    - KUBERNETES_KUBEVAL
+  FILTER_REGEX_INCLUDE: "(terraform/|k8s/|\.tf$|\.yaml$|\.yml$)"

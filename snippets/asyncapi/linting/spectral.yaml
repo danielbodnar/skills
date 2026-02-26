@@ -1,0 +1,203 @@
+# Spectral Linting Configuration for AsyncAPI
+# https://meta.stoplight.io/docs/spectral/docs/getting-started/rulesets.md
+
+extends:
+  - "@asyncapi/spectral-ruleset"
+
+rules:
+  # AsyncAPI Document Structure Rules
+  asyncapi-document-resolved: true
+  asyncapi-info-contact: error
+  asyncapi-info-description: warn
+  asyncapi-info-license: error
+  
+  # Server Rules
+  asyncapi-server-no-empty-variable: error
+  asyncapi-server-no-trailing-slash: error
+  asyncapi-server-not-example-com: warn
+  
+  # Channel Rules
+  asyncapi-channel-no-empty-parameter: error
+  asyncapi-channel-no-query-nor-fragment: warn
+  asyncapi-channel-parameters: error
+  
+  # Operation Rules
+  asyncapi-operation-action: error
+  asyncapi-operation-description: warn
+  asyncapi-operation-operationId: error
+  asyncapi-operation-summary: warn
+  
+  # Message Rules
+  asyncapi-message-examples: warn
+  asyncapi-message-headers: error
+  asyncapi-message-messageId: error
+  asyncapi-message-payload: error
+  
+  # Schema Rules
+  asyncapi-schema: error
+  asyncapi-schema-default: warn
+  asyncapi-schema-examples: warn
+  
+  # Security Rules
+  asyncapi-server-security: error
+  
+  # Tag Rules
+  asyncapi-tag-description: warn
+  
+  # Custom Rules
+  no-empty-servers:
+    description: "Servers object should not be empty"
+    given: "$"
+    severity: error
+    then:
+      field: servers
+      function: truthy
+      
+  no-empty-channels:
+    description: "Channels object should not be empty"
+    given: "$"
+    severity: error
+    then:
+      field: channels
+      function: truthy
+      
+  no-empty-operations:
+    description: "Operations object should not be empty when channels exist"
+    given: "$"
+    severity: warn
+    then:
+      field: operations
+      function: truthy
+      
+  channel-address-kebab-case:
+    description: "Channel addresses should use kebab-case"
+    given: "$.channels.*"
+    severity: warn
+    then:
+      field: address
+      function: pattern
+      functionOptions:
+        match: "^[a-z0-9\\-\\/\\{\\}]+$"
+        
+  operation-id-kebab-case:
+    description: "Operation IDs should use kebab-case"
+    given: "$.operations[*]"
+    severity: warn
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^[a-z0-9\\-]+$"
+        
+  message-name-pascal-case:
+    description: "Message names should use PascalCase"
+    given: "$.channels.*.messages.*"
+    severity: warn
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^[A-Z][a-zA-Z0-9]*$"
+        
+  schema-name-pascal-case:
+    description: "Schema names should use PascalCase"
+    given: "$.components.schemas.*"
+    severity: warn
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^[A-Z][a-zA-Z0-9]*$"
+        
+  required-operation-tags:
+    description: "Operations should have tags for organization"
+    given: "$.operations[*]"
+    severity: warn
+    then:
+      field: tags
+      function: truthy
+      
+  required-message-examples:
+    description: "Messages should include examples"
+    given: "$.channels.*.messages.*"
+    severity: info
+    then:
+      field: examples
+      function: truthy
+      
+  consistent-content-type:
+    description: "Messages should have consistent content types"
+    given: "$.channels.*.messages.*"
+    severity: warn
+    then:
+      field: contentType
+      function: truthy
+      
+  no-generic-descriptions:
+    description: "Avoid generic descriptions"
+    given: "$..[?(@property === 'description')]"
+    severity: warn
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(TODO|FIXME|TBD|A .+|An .+|The .+)$"
+        
+  payload-schema-required:
+    description: "Message payloads should have schemas defined"
+    given: "$.channels.*.messages.*"
+    severity: error
+    then:
+      field: payload
+      function: truthy
+      
+  correlation-id-location:
+    description: "Correlation IDs should specify location"
+    given: "$.components.correlationIds.*"
+    severity: error
+    then:
+      field: location
+      function: truthy
+      
+  security-scheme-description:
+    description: "Security schemes should have descriptions"
+    given: "$.components.securitySchemes.*"
+    severity: warn
+    then:
+      field: description
+      function: truthy
+      
+  no-unused-components:
+    description: "Components should be referenced"
+    given: "$"
+    severity: warn
+    then:
+      function: unreferencedReusableObject
+      functionOptions:
+        reusableObjectsLocation: "#/components"
+        
+  valid-server-url:
+    description: "Server URLs should be valid"
+    given: "$.servers.*"
+    severity: error
+    then:
+      field: host
+      function: pattern
+      functionOptions:
+        match: "^[a-zA-Z0-9\\-\\.:]+$"
+        
+  parameter-description-required:
+    description: "Parameters should have descriptions"
+    given: "$.channels.*.parameters.*"
+    severity: warn
+    then:
+      field: description
+      function: truthy
+
+# Additional functions for custom rules
+functions:
+  - unreferencedReusableObject
+  
+# Parser options
+parserOptions:
+  duplicate-keys: error
+  incompatible-values: error

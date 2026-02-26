@@ -1,0 +1,413 @@
+# CI/CD Examples for mise
+
+# =============================================================================
+# GITHUB ACTIONS
+# =============================================================================
+
+# .github/workflows/ci.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          version: latest
+          
+      - name: Install dependencies
+        run: mise install
+        
+      - name: Run linting
+        run: mise run lint
+        
+      - name: Run tests
+        run: mise run test
+        
+      - name: Build application
+        run: mise run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        
+      - name: Install dependencies
+        run: mise install
+        
+      - name: Build for production
+        run: mise run build
+        env:
+          NODE_ENV: production
+          
+      - name: Deploy
+        run: mise run deploy
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+
+# =============================================================================
+# GITLAB CI
+# =============================================================================
+
+# .gitlab-ci.yml
+image: ubuntu:22.04
+
+variables:
+  MISE_DATA_DIR: "$CI_PROJECT_DIR/.mise"
+  MISE_CACHE_DIR: "$CI_PROJECT_DIR/.cache/mise"
+
+cache:
+  paths:
+    - .mise/
+    - .cache/
+
+before_script:
+  - apt-get update -qq && apt-get install -y curl
+  - curl https://mise.run | sh
+  - export PATH="$HOME/.local/bin:$PATH"
+  - mise install
+
+stages:
+  - test
+  - build
+  - deploy
+
+test:
+  stage: test
+  script:
+    - mise run lint
+    - mise run test
+  artifacts:
+    reports:
+      junit: test-results.xml
+      coverage: coverage.xml
+
+build:
+  stage: build
+  script:
+    - mise run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+
+deploy:
+  stage: deploy
+  script:
+    - mise run deploy
+  only:
+    - main
+
+# =============================================================================
+# JENKINS
+# =============================================================================
+
+# Jenkinsfile
+pipeline {
+    agent any
+    
+    environment {
+        MISE_DATA_DIR = "${WORKSPACE}/.mise"
+        MISE_CACHE_DIR = "${WORKSPACE}/.cache/mise"
+    }
+    
+    stages {
+        stage('Setup') {
+            steps {
+                sh 'curl https://mise.run | sh'
+                sh 'export PATH="$HOME/.local/bin:$PATH" && mise install'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh 'export PATH="$HOME/.local/bin:$PATH" && mise run test'
+            }
+            post {
+                always {
+                    publishTestResults testResultsPattern: 'test-results.xml'
+                    publishCoverageResults source: 'coverage.xml'
+                }
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh 'export PATH="$HOME/.local/bin:$PATH" && mise run build'
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: 'dist/**/*', allowEmptyArchive: false
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh 'export PATH="$HOME/.local/bin:$PATH" && mise run deploy'
+            }
+        }
+    }
+}
+
+# =============================================================================
+# AZURE DEVOPS
+# =============================================================================
+
+# azure-pipelines.yml
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  MISE_DATA_DIR: '$(Agent.WorkFolder)/.mise'
+  MISE_CACHE_DIR: '$(Agent.WorkFolder)/.cache/mise'
+
+stages:
+  - stage: Test
+    jobs:
+      - job: TestJob
+        steps:
+          - script: |
+              curl https://mise.run | sh
+              export PATH="$HOME/.local/bin:$PATH"
+              mise install
+            displayName: 'Setup mise'
+            
+          - script: |
+              export PATH="$HOME/.local/bin:$PATH"
+              mise run lint
+            displayName: 'Run linting'
+            
+          - script: |
+              export PATH="$HOME/.local/bin:$PATH"
+              mise run test
+            displayName: 'Run tests'
+            
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFiles: 'test-results.xml'
+              testRunTitle: 'Unit Tests'
+
+  - stage: Build
+    dependsOn: Test
+    jobs:
+      - job: BuildJob
+        steps:
+          - script: |
+              curl https://mise.run | sh
+              export PATH="$HOME/.local/bin:$PATH"
+              mise install
+              mise run build
+            displayName: 'Build application'
+            
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: 'dist'
+              artifactName: 'build-artifacts'
+
+  - stage: Deploy
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployJob
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: |
+                    curl https://mise.run | sh
+                    export PATH="$HOME/.local/bin:$PATH"
+                    mise install
+                    mise run deploy
+                  displayName: 'Deploy to production'
+
+# =============================================================================
+# CIRCLE CI
+# =============================================================================
+
+# .circleci/config.yml
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/base:2023.09
+    steps:
+      - checkout
+      - run:
+          name: Install mise
+          command: |
+            curl https://mise.run | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> $BASH_ENV
+      - run:
+          name: Install dependencies
+          command: mise install
+      - run:
+          name: Run tests
+          command: |
+            mise run lint
+            mise run test
+      - store_test_results:
+          path: test-results
+
+  build:
+    docker:
+      - image: cimg/base:2023.09
+    steps:
+      - checkout
+      - run:
+          name: Install mise
+          command: |
+            curl https://mise.run | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> $BASH_ENV
+      - run:
+          name: Install dependencies
+          command: mise install
+      - run:
+          name: Build application
+          command: mise run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+
+  deploy:
+    docker:
+      - image: cimg/base:2023.09
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install mise
+          command: |
+            curl https://mise.run | sh
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> $BASH_ENV
+      - run:
+          name: Deploy
+          command: mise run deploy
+
+workflows:
+  version: 2
+  test-build-deploy:
+    jobs:
+      - test
+      - build:
+          requires:
+            - test
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: main
+
+# =============================================================================
+# DOCKER INTEGRATION
+# =============================================================================
+
+# Dockerfile with mise
+FROM ubuntu:22.04
+
+# Install mise
+RUN apt-get update && apt-get install -y curl && \
+    curl https://mise.run | sh && \
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+# Copy configuration
+COPY mise.toml .
+COPY package.json .
+
+# Install tools and dependencies
+RUN /bin/bash -c "source ~/.bashrc && mise install"
+
+# Copy source code
+COPY . .
+
+# Build application
+RUN /bin/bash -c "source ~/.bashrc && mise run build"
+
+# Set entrypoint
+ENTRYPOINT ["/bin/bash", "-c", "source ~/.bashrc && mise run start"]
+
+# =============================================================================
+# DOCKER COMPOSE WITH MISE
+# =============================================================================
+
+# docker-compose.yml
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: /bin/bash -c "source ~/.bashrc && mise run start"
+
+  worker:
+    build: .
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: /bin/bash -c "source ~/.bashrc && mise run worker"
+
+# =============================================================================
+# KUBERNETES INTEGRATION
+# =============================================================================
+
+# k8s/deployment.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: app
+        image: myapp:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        command: ["/bin/bash"]
+        args: ["-c", "source ~/.bashrc && mise run start"]

@@ -1,0 +1,10 @@
+{
+  "name": "code-quality",
+  "version": "1.0.0",
+  "description": "OxLint, Biome, and Prettier configuration, linting skills, and pre-commit hooks for consistent code quality.",
+  "author": {
+    "name": "Daniel Bodnar",
+    "email": "daniel.bodnar@gmail.com"
+  },
+  "keywords": ["oxlint", "biome", "prettier", "linting", "formatting", "code-quality"]
+}

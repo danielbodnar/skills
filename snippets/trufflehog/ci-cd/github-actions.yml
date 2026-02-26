@@ -1,0 +1,366 @@
+# TruffleHog GitHub Actions Workflows
+# Various configurations for secret scanning in GitHub Actions
+
+# Basic secret scanning workflow
+name: Secret Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  # Basic TruffleHog scan
+  trufflehog-scan:
+    name: TruffleHog Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: ${{ github.ref_name }}
+        extra_args: --results=verified,unknown --fail
+
+  # Advanced scan with custom configuration
+  advanced-scan:
+    name: Advanced Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Create TruffleHog config
+      run: |
+        cat > trufflehog-config.yaml << 'EOF'
+        detectors:
+          - name: CustomAPIDetector
+            keywords:
+              - api_key
+              - secret
+            regex:
+              key: '[A-Za-z0-9]{32,}'
+            entropy: 3.5
+        EOF
+
+    - name: TruffleHog with custom config
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: ${{ github.ref_name }}
+        extra_args: --config=trufflehog-config.yaml --results=verified,unknown --fail
+
+  # Scan with artifact upload
+  scan-with-artifacts:
+    name: Scan with Result Artifacts
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install TruffleHog
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+    - name: Run TruffleHog scan
+      run: |
+        trufflehog git file://. \
+          --since-commit=main \
+          --results=verified,unknown \
+          --json \
+          --no-update > trufflehog-results.json || true
+
+    - name: Upload scan results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: trufflehog-results
+        path: trufflehog-results.json
+        retention-days: 30
+
+    - name: Check for secrets
+      run: |
+        if [ -s trufflehog-results.json ]; then
+          echo "::error::Secrets detected in repository"
+          cat trufflehog-results.json
+          exit 1
+        fi
+
+  # Matrix scan for multiple repositories
+  matrix-scan:
+    name: Multi-Repository Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repository:
+          - repo1
+          - repo2
+          - repo3
+    steps:
+    - name: Checkout ${{ matrix.repository }}
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository_owner }}/${{ matrix.repository }}
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Scan ${{ matrix.repository }}
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        extra_args: --results=verified,unknown --json
+
+  # Optimized scan with shallow cloning
+  optimized-scan:
+    name: Optimized Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Calculate fetch depth
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" == "push" ]; then
+          echo "depth=$(($(jq length <<< '${{ toJson(github.event.commits) }}') + 2))" >> $GITHUB_ENV
+          echo "branch=${{ github.ref_name }}" >> $GITHUB_ENV
+        fi
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          echo "depth=$((${{ github.event.pull_request.commits }}+2))" >> $GITHUB_ENV
+          echo "branch=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+        fi
+
+    - name: Checkout with optimized depth
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ env.branch }}
+        fetch-depth: ${{ env.depth }}
+
+    - name: TruffleHog optimized scan
+      uses: trufflesecurity/trufflehog@main
+      with:
+        extra_args: --results=verified,unknown --exclude-globs=*.log,node_modules/*
+
+  # Scan entire branch (not just diff)
+  full-branch-scan:
+    name: Full Branch Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Scan entire branch
+      uses: trufflesecurity/trufflehog@main
+      with:
+        base: ""
+        head: ${{ github.ref_name }}
+        extra_args: --results=verified,unknown
+
+  # Conditional scan based on changed files
+  conditional-scan:
+    name: Conditional Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v41
+      with:
+        files: |
+          **/*.js
+          **/*.ts
+          **/*.py
+          **/*.go
+          **/*.yaml
+          **/*.yml
+          **/*.json
+          .env*
+
+    - name: TruffleHog scan changed files
+      if: steps.changed-files.outputs.any_changed == 'true'
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: ${{ github.ref_name }}
+        extra_args: --results=verified,unknown --fail
+
+  # Scan with notifications
+  scan-with-notifications:
+    name: Scan with Slack Notifications
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install TruffleHog
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+    - name: Run TruffleHog scan
+      id: scan
+      run: |
+        trufflehog git file://. \
+          --since-commit=main \
+          --results=verified,unknown \
+          --json \
+          --no-update > scan-results.json
+        echo "secrets_found=$(wc -l < scan-results.json)" >> $GITHUB_OUTPUT
+      continue-on-error: true
+
+    - name: Notify on secrets found
+      if: steps.scan.outputs.secrets_found > 0
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: |
+          🚨 **Security Alert**: ${{ steps.scan.outputs.secrets_found }} secrets detected in ${{ github.repository }}
+          
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Author: ${{ github.actor }}
+          
+          Please review and remediate immediately.
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Pre-commit style scan
+  pre-commit-scan:
+    name: Pre-commit Style Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: TruffleHog pre-commit scan
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+        trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail
+
+  # Docker-based scan
+  docker-scan:
+    name: Docker-based Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: TruffleHog Docker scan
+      run: |
+        docker run --rm -v "$GITHUB_WORKSPACE:/workdir" \
+          trufflesecurity/trufflehog:latest \
+          git file:///workdir --since-commit HEAD --results=verified,unknown --fail
+
+  # Scan with custom verification
+  custom-verification-scan:
+    name: Custom Verification Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup custom verifier
+      run: |
+        # Example: Setup internal verification service
+        echo "Setting up custom verification endpoint..."
+
+    - name: TruffleHog with custom verification
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: ${{ github.ref_name }}
+        extra_args: --verifier=https://internal-verifier.company.com/verify --results=verified
+
+  # Security-focused workflow with multiple checks
+  security-workflow:
+    name: Comprehensive Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install security tools
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+    - name: Create security config
+      run: |
+        cat > security-config.yaml << 'EOF'
+        detectors:
+          - name: HighPrioritySecrets
+            keywords:
+              - password
+              - secret
+              - key
+              - token
+              - credential
+            regex:
+              secret: '[A-Za-z0-9+/=]{20,}'
+            entropy: 4.0
+            exclude_words:
+              - example
+              - test
+              - demo
+              - placeholder
+        EOF
+
+    - name: TruffleHog comprehensive scan
+      run: |
+        trufflehog git file://. \
+          --config=security-config.yaml \
+          --results=verified,unknown \
+          --json \
+          --fail \
+          --print-avg-detector-time > security-results.json
+
+    - name: Security report
+      if: always()
+      run: |
+        echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        if [ -s security-results.json ]; then
+          echo "⚠️ **Secrets detected!**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          head -20 security-results.json >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "✅ **No secrets detected**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload security results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-scan-results
+        path: |
+          security-results.json
+          security-config.yaml

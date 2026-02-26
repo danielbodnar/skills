@@ -1,0 +1,279 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Theme UI Theme Schema",
+  "description": "JSON Schema for Theme UI theme configuration",
+  "type": "object",
+  "properties": {
+    "colors": {
+      "type": "object",
+      "description": "Color palette for the theme",
+      "properties": {
+        "text": { "type": "string", "description": "Primary text color" },
+        "background": { "type": "string", "description": "Primary background color" },
+        "primary": { "type": "string", "description": "Primary brand color" },
+        "secondary": { "type": "string", "description": "Secondary brand color" },
+        "accent": { "type": "string", "description": "Accent color" },
+        "muted": { "type": "string", "description": "Muted/subtle color" },
+        "gray": { "type": "string", "description": "Gray color" },
+        "highlight": { "type": "string", "description": "Highlight color" },
+        "modes": {
+          "type": "object",
+          "description": "Color modes (e.g., dark mode)",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "background": { "type": "string" },
+              "primary": { "type": "string" },
+              "secondary": { "type": "string" },
+              "accent": { "type": "string" },
+              "muted": { "type": "string" },
+              "gray": { "type": "string" },
+              "highlight": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["text", "background", "primary"]
+    },
+    "fonts": {
+      "type": "object",
+      "description": "Font family definitions",
+      "properties": {
+        "body": { "type": "string", "description": "Body text font family" },
+        "heading": { "type": "string", "description": "Heading font family" },
+        "monospace": { "type": "string", "description": "Monospace font family" }
+      },
+      "required": ["body"]
+    },
+    "fontSizes": {
+      "type": "array",
+      "description": "Font size scale array",
+      "items": {
+        "type": ["number", "string"]
+      },
+      "minItems": 1
+    },
+    "fontWeights": {
+      "type": "object",
+      "description": "Font weight definitions",
+      "properties": {
+        "body": { "type": ["number", "string"] },
+        "heading": { "type": ["number", "string"] },
+        "bold": { "type": ["number", "string"] }
+      }
+    },
+    "lineHeights": {
+      "type": "object",
+      "description": "Line height definitions",
+      "properties": {
+        "body": { "type": "number" },
+        "heading": { "type": "number" }
+      }
+    },
+    "letterSpacings": {
+      "type": "object",
+      "description": "Letter spacing definitions",
+      "properties": {
+        "body": { "type": ["number", "string"] },
+        "caps": { "type": ["number", "string"] }
+      }
+    },
+    "space": {
+      "type": "array",
+      "description": "Spacing scale array",
+      "items": {
+        "type": ["number", "string"]
+      },
+      "minItems": 1
+    },
+    "sizes": {
+      "type": "object",
+      "description": "Size definitions",
+      "properties": {
+        "container": { "type": ["number", "string", "array"] },
+        "wide": { "type": ["number", "string"] },
+        "narrow": { "type": ["number", "string"] }
+      }
+    },
+    "breakpoints": {
+      "type": "array",
+      "description": "Responsive breakpoints",
+      "items": {
+        "type": "string"
+      }
+    },
+    "radii": {
+      "type": "object",
+      "description": "Border radius definitions",
+      "properties": {
+        "default": { "type": ["number", "string"] },
+        "circle": { "type": ["number", "string"] }
+      }
+    },
+    "shadows": {
+      "type": "object",
+      "description": "Box shadow definitions",
+      "properties": {
+        "small": { "type": "string" },
+        "large": { "type": "string" }
+      }
+    },
+    "borders": {
+      "type": "object",
+      "description": "Border definitions",
+      "additionalProperties": {
+        "type": ["string", "number"]
+      }
+    },
+    "zIndices": {
+      "type": "object",
+      "description": "Z-index scale",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "text": {
+      "type": "object",
+      "description": "Text variant styles",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "buttons": {
+      "type": "object",
+      "description": "Button variant styles",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "cards": {
+      "type": "object",
+      "description": "Card variant styles",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "forms": {
+      "type": "object",
+      "description": "Form element styles",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "badges": {
+      "type": "object",
+      "description": "Badge variant styles",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "alerts": {
+      "type": "object",
+      "description": "Alert variant styles",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "layout": {
+      "type": "object",
+      "description": "Layout component styles",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "links": {
+      "type": "object",
+      "description": "Link variant styles",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "images": {
+      "type": "object",
+      "description": "Image variant styles",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "styles": {
+      "type": "object",
+      "description": "MDX/Global element styles",
+      "properties": {
+        "root": { "type": "object" },
+        "h1": { "type": "object" },
+        "h2": { "type": "object" },
+        "h3": { "type": "object" },
+        "h4": { "type": "object" },
+        "h5": { "type": "object" },
+        "h6": { "type": "object" },
+        "p": { "type": "object" },
+        "a": { "type": "object" },
+        "ul": { "type": "object" },
+        "ol": { "type": "object" },
+        "li": { "type": "object" },
+        "blockquote": { "type": "object" },
+        "pre": { "type": "object" },
+        "code": { "type": "object" },
+        "table": { "type": "object" },
+        "th": { "type": "object" },
+        "td": { "type": "object" },
+        "img": { "type": "object" },
+        "hr": { "type": "object" }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "Theme configuration options",
+      "properties": {
+        "initialColorModeName": {
+          "type": "string",
+          "description": "Initial color mode"
+        },
+        "useCustomProperties": {
+          "type": "boolean",
+          "description": "Use CSS custom properties"
+        },
+        "useColorSchemeMediaQuery": {
+          "type": "boolean",
+          "description": "Respect system color scheme preference"
+        },
+        "useLocalStorage": {
+          "type": "boolean",
+          "description": "Persist color mode in localStorage"
+        },
+        "printColorModeName": {
+          "type": "string",
+          "description": "Color mode for print media"
+        }
+      }
+    }
+  },
+  "required": ["colors"],
+  "additionalProperties": true,
+  "examples": [
+    {
+      "colors": {
+        "text": "#000",
+        "background": "#fff",
+        "primary": "#07c",
+        "secondary": "#639",
+        "modes": {
+          "dark": {
+            "text": "#fff",
+            "background": "#111",
+            "primary": "#0cf",
+            "secondary": "#96c"
+          }
+        }
+      },
+      "fonts": {
+        "body": "system-ui, sans-serif",
+        "heading": "inherit"
+      },
+      "fontSizes": [12, 14, 16, 20, 24, 32, 48, 64],
+      "space": [0, 4, 8, 16, 32, 64, 128, 256],
+      "breakpoints": ["40em", "52em", "64em"]
+    }
+  ]
+}

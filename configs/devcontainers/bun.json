@@ -1,0 +1,46 @@
+{
+  "name": "Bun Development",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "features": {
+    "ghcr.io/jdx/devcontainer-feature/mise:latest": {},
+    "ghcr.io/nushell/devcontainer-features/nushell:latest": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/git:1": {
+      "ppa": true,
+      "version": "latest"
+    }
+  },
+  "postCreateCommand": "mise install && bun --bun install",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "nu",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.codeActionsOnSave": {
+          "quickfix.biome": "explicit",
+          "source.organizeImports.biome": "explicit"
+        },
+        "typescript.preferences.importModuleSpecifier": "non-relative",
+        "files.eol": "\n",
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true
+      },
+      "extensions": [
+        "biomejs.biome",
+        "oven.bun-vscode",
+        "oxc.oxc-vscode",
+        "jdx.mise-vscode",
+        "EditorConfig.EditorConfig",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-containers",
+        "GitHub.copilot"
+      ]
+    }
+  },
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "BUN_RUNTIME": "bun"
+  }
+}

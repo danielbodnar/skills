@@ -1,0 +1,308 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Orama Cloud Configuration",
+  "description": "JSON Schema for Orama Cloud client and manager configuration",
+  "type": "object",
+  "properties": {
+    "client": {
+      "type": "object",
+      "description": "Orama Cloud client configuration",
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "Orama Cloud endpoint URL"
+        },
+        "api_key": {
+          "type": "string",
+          "description": "Public API key for search operations"
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 1000,
+          "maximum": 60000,
+          "default": 10000,
+          "description": "Request timeout in milliseconds"
+        },
+        "retries": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3,
+          "description": "Number of retry attempts"
+        },
+        "mergeResults": {
+          "type": "boolean",
+          "default": false,
+          "description": "Merge results for multi-index search"
+        },
+        "indexes": {
+          "type": "array",
+          "description": "Array of index configurations for multi-index search",
+          "items": {
+            "type": "object",
+            "properties": {
+              "endpoint": {
+                "type": "string",
+                "format": "uri"
+              },
+              "api_key": {
+                "type": "string"
+              }
+            },
+            "required": ["endpoint", "api_key"]
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["endpoint", "api_key"]
+        },
+        {
+          "required": ["indexes"]
+        }
+      ]
+    },
+    "manager": {
+      "type": "object",
+      "description": "Orama Cloud manager configuration",
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "description": "Private API key for management operations"
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 1000,
+          "maximum": 120000,
+          "default": 30000
+        },
+        "batch": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 100
+            },
+            "timeout": {
+              "type": "number",
+              "minimum": 5000,
+              "maximum": 300000,
+              "default": 30000
+            }
+          }
+        }
+      },
+      "required": ["api_key"]
+    },
+    "search": {
+      "type": "object",
+      "description": "Default search configuration",
+      "properties": {
+        "defaults": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["fulltext", "vector", "hybrid"],
+              "default": "hybrid"
+            },
+            "similarity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.7
+            }
+          }
+        },
+        "filters": {
+          "type": "object",
+          "properties": {
+            "global": {
+              "type": "object",
+              "description": "Filters applied to all searches"
+            }
+          }
+        }
+      }
+    },
+    "answerEngine": {
+      "type": "object",
+      "description": "Answer engine configuration",
+      "properties": {
+        "userContext": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object"
+            }
+          ],
+          "description": "Context about the user for personalized responses"
+        },
+        "inferenceType": {
+          "type": "string",
+          "enum": ["documentation", "conversational", "factual"],
+          "default": "documentation"
+        },
+        "initialMessages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": ["user", "assistant"]
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": ["role", "content"]
+          }
+        },
+        "events": {
+          "type": "object",
+          "properties": {
+            "onMessageChange": {
+              "type": "boolean"
+            },
+            "onMessageLoading": {
+              "type": "boolean" 
+            },
+            "onAnswerAborted": {
+              "type": "boolean"
+            },
+            "onSourceChange": {
+              "type": "boolean"
+            },
+            "onQueryTranslated": {
+              "type": "boolean"
+            },
+            "onStateChange": {
+              "type": "boolean"
+            },
+            "onNewInteractionStarted": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "description": "UI component configuration",
+      "properties": {
+        "searchBox": {
+          "type": "object",
+          "properties": {
+            "placeholder": {
+              "type": "string"
+            },
+            "resultMap": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "section": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              }
+            },
+            "sourceBaseUrl": {
+              "type": "string",
+              "format": "uri"
+            },
+            "colorScheme": {
+              "type": "string",
+              "enum": ["light", "dark", "auto"]
+            },
+            "size": {
+              "type": "string",
+              "enum": ["small", "medium", "large"]
+            },
+            "layout": {
+              "type": "string",
+              "enum": ["inline", "modal"]
+            }
+          }
+        },
+        "chatBox": {
+          "type": "object",
+          "properties": {
+            "suggestions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sourcesMap": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "theme": {
+          "type": "object",
+          "properties": {
+            "colors": {
+              "type": "object",
+              "properties": {
+                "light": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "dark": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "typography": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "spacing": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

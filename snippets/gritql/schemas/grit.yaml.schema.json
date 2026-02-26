@@ -1,0 +1,354 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GritQL Configuration Schema",
+  "description": "Schema for .grit/grit.yaml configuration files",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Configuration version, following semantic versioning",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "examples": ["0.0.2", "1.0.0"]
+    },
+    "patterns": {
+      "type": "array",
+      "description": "List of GritQL patterns",
+      "items": {
+        "$ref": "#/definitions/pattern"
+      }
+    },
+    "workflows": {
+      "type": "array",
+      "description": "List of workflow definitions",
+      "items": {
+        "$ref": "#/definitions/workflow"
+      }
+    },
+    "settings": {
+      "$ref": "#/definitions/settings"
+    }
+  },
+  "required": ["version"],
+  "additionalProperties": false,
+  "definitions": {
+    "pattern": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Pattern name in snake_case",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "examples": ["no_console_log", "prefer_const"]
+        },
+        "title": {
+          "type": "string",
+          "description": "Human-readable pattern title",
+          "examples": ["Remove console.log statements", "Prefer const over var"]
+        },
+        "body": {
+          "type": "string",
+          "description": "GritQL pattern body with transformation logic",
+          "examples": [
+            "console.log($_) => .",
+            "var $name = $value => const $name = $value"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed explanation of what the pattern does"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["none", "info", "warn", "error"],
+          "description": "Enforcement level for the pattern",
+          "default": "warn"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Categorization tags for the pattern",
+          "items": {
+            "type": "string",
+            "examples": ["style", "performance", "security", "es6", "react"]
+          }
+        },
+        "language": {
+          "type": "string",
+          "description": "Target programming language",
+          "enum": ["js", "ts", "jsx", "tsx", "python", "rust", "go", "java", "c", "cpp"],
+          "examples": ["js", "ts", "python"]
+        },
+        "samples": {
+          "type": "array",
+          "description": "Test samples for the pattern",
+          "items": {
+            "$ref": "#/definitions/sample"
+          }
+        },
+        "author": {
+          "type": "string",
+          "description": "Pattern author name or organization"
+        },
+        "version": {
+          "type": "string",
+          "description": "Pattern version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "engine": {
+          "type": "string",
+          "description": "GritQL engine version requirement",
+          "examples": ["marzano(0.1)", "grit(1.0)"]
+        }
+      },
+      "required": ["name", "body"],
+      "additionalProperties": false
+    },
+    "sample": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "Input code for testing"
+        },
+        "output": {
+          "type": "string",
+          "description": "Expected output after transformation"
+        },
+        "name": {
+          "type": "string",
+          "description": "Test case name"
+        }
+      },
+      "required": ["input", "output"],
+      "additionalProperties": false
+    },
+    "workflow": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Workflow name in snake_case",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Workflow description"
+        },
+        "patterns": {
+          "type": "array",
+          "description": "List of pattern names to execute",
+          "items": {
+            "type": "string"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "description": "Ordered workflow steps",
+          "items": {
+            "$ref": "#/definitions/workflow_step"
+          }
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "workflow_step": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Step name"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Pattern name to execute"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Condition for step execution"
+        },
+        "parallel": {
+          "type": "boolean",
+          "description": "Execute step in parallel",
+          "default": false
+        }
+      },
+      "required": ["pattern"],
+      "additionalProperties": false
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "exclude": {
+          "type": "array",
+          "description": "File patterns to exclude from processing",
+          "items": {
+            "type": "string"
+          },
+          "examples": [
+            "node_modules/**",
+            "dist/**", 
+            "build/**",
+            "*.min.js"
+          ]
+        },
+        "include": {
+          "type": "array",
+          "description": "File patterns to include in processing",
+          "items": {
+            "type": "string"
+          },
+          "examples": [
+            "src/**/*.{js,ts,jsx,tsx}",
+            "lib/**/*.js"
+          ]
+        },
+        "parallel": {
+          "type": "boolean",
+          "description": "Enable parallel processing",
+          "default": true
+        },
+        "max_threads": {
+          "type": "integer",
+          "description": "Maximum number of threads for parallel processing",
+          "minimum": 1,
+          "maximum": 32,
+          "default": 4
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Timeout in milliseconds for pattern execution",
+          "minimum": 1000,
+          "default": 30000
+        },
+        "format": {
+          "type": "string",
+          "enum": ["unified", "json", "patch", "diff"],
+          "description": "Output format",
+          "default": "unified"
+        },
+        "color": {
+          "type": "boolean",
+          "description": "Enable colored output",
+          "default": true
+        },
+        "verbose": {
+          "type": "boolean",
+          "description": "Enable verbose logging",
+          "default": false
+        },
+        "cache": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable result caching",
+              "default": true
+            },
+            "ttl": {
+              "type": "integer",
+              "description": "Cache time-to-live in seconds",
+              "minimum": 60,
+              "default": 3600
+            },
+            "directory": {
+              "type": "string",
+              "description": "Cache directory path",
+              "default": ".grit/cache"
+            }
+          },
+          "additionalProperties": false
+        },
+        "registry": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "string",
+              "description": "Default pattern registry"
+            },
+            "sources": {
+              "type": "array",
+              "description": "Pattern registry sources",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Registry name"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Registry URL"
+                  },
+                  "auth": {
+                    "type": "object",
+                    "properties": {
+                      "token": {
+                        "type": "string",
+                        "description": "Authentication token"
+                      },
+                      "username": {
+                        "type": "string",
+                        "description": "Username for basic auth"
+                      },
+                      "password": {
+                        "type": "string",
+                        "description": "Password for basic auth"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["name", "url"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "version": "0.0.2",
+      "patterns": [
+        {
+          "name": "no_console_log",
+          "title": "Remove console.log statements",
+          "body": "console.log($_) => .",
+          "level": "error",
+          "tags": ["debugging", "production"],
+          "description": "Removes console.log statements for production builds"
+        },
+        {
+          "name": "prefer_const",
+          "title": "Prefer const over var",
+          "body": "var $name = $value => const $name = $value where { $value <: not assignment_expression() }",
+          "level": "warn",
+          "tags": ["es6", "style"],
+          "samples": [
+            {
+              "input": "var x = 5;",
+              "output": "const x = 5;"
+            }
+          ]
+        }
+      ],
+      "workflows": [
+        {
+          "name": "modernize_js",
+          "description": "Modernize JavaScript codebase",
+          "patterns": ["prefer_const", "no_console_log"]
+        }
+      ],
+      "settings": {
+        "exclude": ["node_modules/**", "dist/**"],
+        "include": ["src/**/*.{js,ts}"],
+        "parallel": true,
+        "max_threads": 4
+      }
+    }
+  ]
+}

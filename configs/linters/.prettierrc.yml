@@ -1,0 +1,40 @@
+# Prettier configuration
+# Usage: Copy to project root as .prettierrc.yml
+#
+# Uses the oxc parser plugin for faster formatting.
+
+parser: typescript
+plugins:
+  - "@prettier/plugin-oxc"
+
+semi: true
+singleQuote: true
+trailingComma: all
+printWidth: 100
+tabWidth: 2
+useTabs: false
+bracketSpacing: true
+arrowParens: always
+endOfLine: lf
+organizeImportsSkipDestructiveCodeActions: true
+
+overrides:
+  - files: "*.json"
+    options:
+      parser: json
+      trailingComma: none
+  - files: "*.jsonc"
+    options:
+      parser: jsonc
+      trailingComma: none
+  - files: "*.md"
+    options:
+      parser: markdown
+      proseWrap: always
+  - files: "*.yml"
+    options:
+      parser: yaml
+  - files: "*.css"
+    options:
+      parser: css
+      singleQuote: false

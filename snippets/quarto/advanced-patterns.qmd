@@ -1,0 +1,866 @@
+---
+title: "Advanced Quarto Patterns"
+format: html
+execute:
+  eval: false
+---
+
+# Advanced Quarto Usage Patterns
+
+## Custom Extensions
+
+### Creating a Custom Filter
+
+```lua
+-- filters/custom-callout.lua
+function Div(elem)
+  if elem.classes:includes("custom-callout") then
+    local callout_type = elem.attributes["type"] or "note"
+    local title = elem.attributes["title"] or "Note"
+
+    -- Create custom HTML structure
+    local html = string.format([[
+      <div class="custom-callout callout-%s">
+        <div class="callout-header">
+          <i class="callout-icon"></i>
+          <span class="callout-title">%s</span>
+        </div>
+        <div class="callout-body">
+          %s
+        </div>
+      </div>
+    ]], callout_type, title, pandoc.write(pandoc.Pandoc(elem.content), "html"))
+
+    return pandoc.RawBlock("html", html)
+  end
+end
+```
+
+### Custom Shortcode
+
+```lua
+-- _extensions/custom/shortcodes.lua
+return {
+  ["progress"] = function(args, kwargs, meta)
+    local value = tonumber(args[1]) or 0
+    local max_value = tonumber(kwargs["max"]) or 100
+    local color = kwargs["color"] or "blue"
+
+    local percentage = (value / max_value) * 100
+
+    local html = string.format([[
+      <div class="progress-container">
+        <div class="progress-bar" style="width: %.1f%%; background-color: %s;">
+          <span class="progress-text">%.1f%%</span>
+        </div>
+      </div>
+    ]], percentage, color, percentage)
+
+    return pandoc.RawInline("html", html)
+  end
+}
+```
+
+### Extension Configuration
+
+```yaml
+# _extensions/custom/_extension.yml
+title: Custom Extensions
+author: Your Name
+version: 1.0.0
+quarto-required: ">=1.4.0"
+contributes:
+  shortcodes:
+    - shortcodes.lua
+  filters:
+    - custom-callout.lua
+  format-resources:
+    - custom.css
+    - custom.js
+```
+
+## Advanced Parameterization
+
+### Dynamic Parameter Loading
+
+```python
+# Advanced parameterization example
+import yaml
+import os
+from datetime import datetime, timedelta
+
+def load_dynamic_params():
+    """Load parameters dynamically based on environment and date."""
+
+    # Base parameters
+    params = {
+        'report_date': datetime.now().strftime('%Y-%m-%d'),
+        'author': os.getenv('REPORT_AUTHOR', 'Unknown'),
+        'environment': os.getenv('ENVIRONMENT', 'development')
+    }
+
+    # Environment-specific parameters
+    if params['environment'] == 'production':
+        params.update({
+            'database_url': os.getenv('PROD_DATABASE_URL'),
+            'cache_enabled': True,
+            'debug_mode': False
+        })
+    else:
+        params.update({
+            'database_url': os.getenv('DEV_DATABASE_URL', 'sqlite:///dev.db'),
+            'cache_enabled': False,
+            'debug_mode': True
+        })
+
+    # Date-based parameters
+    if datetime.now().weekday() == 0:  # Monday
+        params['report_type'] = 'weekly'
+        params['date_range'] = 7
+    else:
+        params['report_type'] = 'daily'
+        params['date_range'] = 1
+
+    return params
+
+# Save parameters to file for Quarto to use
+params = load_dynamic_params()
+with open('_params.yml', 'w') as f:
+    yaml.dump({'params': params}, f)
+
+print("Dynamic parameters generated:", params)
+```
+
+### Conditional Content Rendering
+
+````markdown
+---
+title: "Conditional Report"
+params:
+  environment: "production"
+  include_debug: false
+  user_role: "admin"
+---
+
+```{python}
+#| echo: false
+import os
+
+# Access parameters
+env = r.params['environment']
+include_debug = r.params['include_debug']
+user_role = r.params['user_role']
+
+# Set conditional flags
+show_sensitive_data = (env == 'production' and user_role == 'admin')
+show_debug_info = include_debug
+```
+
+# Executive Summary
+
+This report provides insights for the {{< meta params.environment >}} environment.
+
+::: {.content-visible when-meta="params.user_role='admin'"}
+## Administrative Section
+
+This section is only visible to administrators.
+
+```{python}
+#| echo: !expr r.params['include_debug']
+#| eval: !expr r.params['user_role'] == 'admin'
+
+if show_sensitive_data:
+    print("Sensitive administrative data here")
+else:
+    print("Access denied: Insufficient privileges")
+```
+:::
+
+::: {.content-visible when-meta="params.include_debug=true"}
+## Debug Information
+
+```{python}
+#| echo: true
+import sys
+print(f"Python version: {sys.version}")
+print(f"Environment: {env}")
+print(f"User role: {user_role}")
+```
+:::
+
+::: {.content-hidden when-meta="params.environment='production'"}
+## Development Notes
+
+This section is hidden in production builds.
+:::
+````
+
+## Complex Data Processing Pipelines
+
+### Multi-Stage Data Pipeline
+
+```python
+# data-pipeline.py
+import pandas as pd
+import numpy as np
+from pathlib import Path
+import logging
+from functools import wraps
+import time
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def timer(func):
+    """Decorator to time function execution."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        logger.info(f"{func.__name__} completed in {end-start:.2f} seconds")
+        return result
+    return wrapper
+
+class DataPipeline:
+    """Advanced data processing pipeline for Quarto reports."""
+
+    def __init__(self, config):
+        self.config = config
+        self.cache_dir = Path(config.get('cache_dir', '.cache'))
+        self.cache_dir.mkdir(exist_ok=True)
+
+    @timer
+    def extract_data(self, sources):
+        """Extract data from multiple sources."""
+        datasets = {}
+
+        for name, source in sources.items():
+            logger.info(f"Extracting data from {name}")
+
+            if source['type'] == 'csv':
+                datasets[name] = pd.read_csv(source['path'])
+            elif source['type'] == 'sql':
+                datasets[name] = pd.read_sql(source['query'], source['connection'])
+            elif source['type'] == 'api':
+                # Implement API data extraction
+                datasets[name] = self._fetch_api_data(source)
+
+            logger.info(f"Loaded {len(datasets[name])} records from {name}")
+
+        return datasets
+
+    @timer
+    def transform_data(self, datasets):
+        """Transform and clean data."""
+        transformed = {}
+
+        for name, df in datasets.items():
+            logger.info(f"Transforming {name}")
+
+            # Apply transformations
+            df_clean = df.copy()
+
+            # Handle missing values
+            df_clean = self._handle_missing_values(df_clean)
+
+            # Apply data type conversions
+            df_clean = self._convert_data_types(df_clean)
+
+            # Apply business logic transformations
+            df_clean = self._apply_business_rules(df_clean, name)
+
+            transformed[name] = df_clean
+            logger.info(f"Transformed {name}: {len(df_clean)} records")
+
+        return transformed
+
+    @timer
+    def generate_features(self, datasets):
+        """Generate derived features for analysis."""
+        enhanced = {}
+
+        for name, df in datasets.items():
+            logger.info(f"Generating features for {name}")
+
+            df_enhanced = df.copy()
+
+            # Time-based features
+            if 'date' in df_enhanced.columns:
+                df_enhanced['year'] = pd.to_datetime(df_enhanced['date']).dt.year
+                df_enhanced['month'] = pd.to_datetime(df_enhanced['date']).dt.month
+                df_enhanced['day_of_week'] = pd.to_datetime(df_enhanced['date']).dt.dayofweek
+
+            # Aggregate features
+            if 'category' in df_enhanced.columns and 'value' in df_enhanced.columns:
+                category_stats = df_enhanced.groupby('category')['value'].agg(['mean', 'std'])
+                df_enhanced = df_enhanced.merge(
+                    category_stats,
+                    left_on='category',
+                    right_index=True,
+                    suffixes=('', '_category_avg')
+                )
+
+            enhanced[name] = df_enhanced
+
+        return enhanced
+
+    def _handle_missing_values(self, df):
+        """Handle missing values based on column types."""
+        for col in df.columns:
+            if df[col].dtype in ['int64', 'float64']:
+                # Fill numeric columns with median
+                df[col].fillna(df[col].median(), inplace=True)
+            elif df[col].dtype == 'object':
+                # Fill categorical columns with mode
+                df[col].fillna(df[col].mode().iloc[0] if not df[col].mode().empty else 'Unknown', inplace=True)
+
+        return df
+
+    def _convert_data_types(self, df):
+        """Convert data types for better performance."""
+        # Convert object columns to category if they have few unique values
+        for col in df.select_dtypes(include=['object']).columns:
+            if df[col].nunique() / len(df) < 0.5:  # Less than 50% unique values
+                df[col] = df[col].astype('category')
+
+        return df
+
+    def _apply_business_rules(self, df, dataset_name):
+        """Apply dataset-specific business rules."""
+        # This would contain business-specific transformations
+        logger.info(f"Applying business rules to {dataset_name}")
+        return df
+
+    def _fetch_api_data(self, source):
+        """Fetch data from API source."""
+        # Implementation would depend on specific API
+        logger.info(f"Fetching data from API: {source['url']}")
+        return pd.DataFrame()  # Placeholder
+
+# Usage in Quarto document
+```
+
+````markdown
+```{python}
+#| echo: false
+from data_pipeline import DataPipeline
+
+# Configure pipeline
+config = {
+    'cache_dir': '.cache',
+    'sources': {
+        'sales': {
+            'type': 'csv',
+            'path': 'data/sales.csv'
+        },
+        'customers': {
+            'type': 'sql',
+            'query': 'SELECT * FROM customers',
+            'connection': 'postgresql://user:pass@localhost/db'
+        }
+    }
+}
+
+# Initialize and run pipeline
+pipeline = DataPipeline(config)
+raw_data = pipeline.extract_data(config['sources'])
+clean_data = pipeline.transform_data(raw_data)
+enhanced_data = pipeline.generate_features(clean_data)
+
+# Display summary
+for name, df in enhanced_data.items():
+    print(f"{name}: {df.shape}")
+```
+````
+
+## Advanced Visualization Patterns
+
+### Interactive Dashboard Components
+
+```python
+# interactive-components.py
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+import ipywidgets as widgets
+from IPython.display import display
+
+class InteractiveDashboard:
+    """Create interactive dashboard components for Quarto."""
+
+    def __init__(self, data):
+        self.data = data
+
+    def create_filter_widget(self, column, widget_type='dropdown'):
+        """Create interactive filter widget."""
+        unique_values = self.data[column].unique()
+
+        if widget_type == 'dropdown':
+            widget = widgets.Dropdown(
+                options=unique_values,
+                value=unique_values[0],
+                description=f'{column.title()}:'
+            )
+        elif widget_type == 'multiselect':
+            widget = widgets.SelectMultiple(
+                options=unique_values,
+                value=[unique_values[0]],
+                description=f'{column.title()}:'
+            )
+
+        return widget
+
+    def create_dynamic_chart(self, x_column, y_column, color_column=None):
+        """Create dynamic chart that updates based on filters."""
+
+        def update_chart(filter_values):
+            # Filter data based on widget values
+            filtered_data = self.data.copy()
+
+            if isinstance(filter_values, dict):
+                for col, values in filter_values.items():
+                    if isinstance(values, (list, tuple)):
+                        filtered_data = filtered_data[filtered_data[col].isin(values)]
+                    else:
+                        filtered_data = filtered_data[filtered_data[col] == values]
+
+            # Create chart
+            if color_column:
+                fig = px.scatter(filtered_data, x=x_column, y=y_column,
+                               color=color_column, size_max=10)
+            else:
+                fig = px.scatter(filtered_data, x=x_column, y=y_column)
+
+            fig.update_layout(
+                title=f"{y_column} vs {x_column}",
+                height=500
+            )
+
+            return fig
+
+        return update_chart
+
+    def create_summary_cards(self, metrics):
+        """Create summary metric cards."""
+        cards = []
+
+        for metric in metrics:
+            value = self.data[metric].sum() if metric in self.data.columns else 0
+
+            card_html = f"""
+            <div class="metric-card">
+                <h3>{metric.replace('_', ' ').title()}</h3>
+                <p class="metric-value">{value:,.0f}</p>
+            </div>
+            """
+            cards.append(card_html)
+
+        return "\n".join(cards)
+
+# Usage in Quarto document
+```
+
+````markdown
+```{python}
+#| echo: false
+from interactive_components import InteractiveDashboard
+import pandas as pd
+
+# Load data
+df = pd.read_csv('sales_data.csv')
+
+# Create dashboard
+dashboard = InteractiveDashboard(df)
+
+# Create filter widgets
+region_filter = dashboard.create_filter_widget('region', 'multiselect')
+category_filter = dashboard.create_filter_widget('category', 'dropdown')
+
+# Create dynamic chart function
+chart_updater = dashboard.create_dynamic_chart('date', 'sales', 'region')
+
+# Display summary cards
+summary_html = dashboard.create_summary_cards(['sales', 'profit', 'quantity'])
+display(HTML(summary_html))
+```
+
+```{python}
+#| echo: false
+# Interactive chart with filters
+def update_display(region_values, category_value):
+    filters = {
+        'region': region_values,
+        'category': category_value
+    }
+    fig = chart_updater(filters)
+    fig.show()
+
+# Create interactive widget
+widgets.interact(update_display,
+                region_values=region_filter,
+                category_value=category_filter)
+```
+````
+
+## Template Systems
+
+### Custom Document Templates
+
+```yaml
+# _extensions/report-template/_extension.yml
+title: Corporate Report Template
+author: Your Organization
+version: 1.0.0
+contributes:
+  formats:
+    common:
+      toc: true
+      number-sections: true
+      highlight-style: github
+    html:
+      theme:
+        - cosmo
+        - custom.scss
+      css: styles.css
+      include-after-body: footer.html
+    pdf:
+      documentclass: report
+      geometry: margin=1in
+      include-in-header: preamble.tex
+```
+
+### Dynamic Template Generation
+
+```python
+# template-generator.py
+from jinja2 import Template
+import yaml
+from pathlib import Path
+
+class QuartoTemplateGenerator:
+    """Generate Quarto documents from templates."""
+
+    def __init__(self, template_dir='templates'):
+        self.template_dir = Path(template_dir)
+
+    def generate_document(self, template_name, context, output_path):
+        """Generate document from template and context."""
+
+        # Load template
+        template_path = self.template_dir / f"{template_name}.qmd"
+        template_content = template_path.read_text()
+
+        # Create Jinja2 template
+        template = Template(template_content)
+
+        # Render with context
+        rendered_content = template.render(**context)
+
+        # Write to output file
+        Path(output_path).write_text(rendered_content)
+
+        print(f"Generated document: {output_path}")
+
+    def generate_report_suite(self, config_file):
+        """Generate multiple reports from configuration."""
+
+        with open(config_file) as f:
+            config = yaml.safe_load(f)
+
+        for report in config['reports']:
+            self.generate_document(
+                template_name=report['template'],
+                context=report['context'],
+                output_path=report['output']
+            )
+
+# Template example (templates/sales-report.qmd)
+template_content = """
+---
+title: "{{ report_title }}"
+author: "{{ author }}"
+date: "{{ report_date }}"
+format:
+  html:
+    theme: cosmo
+params:
+  region: "{{ region }}"
+  start_date: "{{ start_date }}"
+  end_date: "{{ end_date }}"
+---
+
+# Sales Report for {{ region }}
+
+## Executive Summary
+
+This report covers sales performance from {{ start_date }} to {{ end_date }}.
+
+```{python}
+#| echo: false
+import pandas as pd
+
+# Load data for region
+region = r.params['region']
+start_date = r.params['start_date']
+end_date = r.params['end_date']
+
+# Query data
+df = load_sales_data(region, start_date, end_date)
+
+print(f"Total sales: ${df['sales'].sum():,.2f}")
+print(f"Number of transactions: {len(df):,}")
+```
+
+{% for section in sections %}
+## {{ section.title }}
+
+{{ section.content }}
+
+{% if section.chart %}
+```{python}
+#| echo: false
+#| fig-cap: "{{ section.chart.caption }}"
+
+create_chart(df, "{{ section.chart.type }}", "{{ section.chart.x }}", "{{ section.chart.y }}")
+```
+{% endif %}
+
+{% endfor %}
+"""
+
+# Usage
+generator = QuartoTemplateGenerator()
+
+context = {
+    'report_title': 'Q4 Sales Report',
+    'author': 'Sales Team',
+    'report_date': '2024-01-15',
+    'region': 'North America',
+    'start_date': '2023-10-01',
+    'end_date': '2023-12-31',
+    'sections': [
+        {
+            'title': 'Regional Performance',
+            'content': 'Analysis of regional sales trends.',
+            'chart': {
+                'type': 'line',
+                'x': 'date',
+                'y': 'sales',
+                'caption': 'Daily Sales Trend'
+            }
+        }
+    ]
+}
+
+generator.generate_document('sales-report', context, 'q4-sales-report.qmd')
+```
+
+## Performance Optimization
+
+### Computational Caching Strategies
+
+```python
+# caching-strategies.py
+import functools
+import hashlib
+import pickle
+import time
+from pathlib import Path
+import pandas as pd
+
+class AdvancedCache:
+    """Advanced caching system for Quarto computations."""
+
+    def __init__(self, cache_dir='.cache', expire_hours=24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.expire_hours = expire_hours
+
+    def cache_key(self, func_name, args, kwargs):
+        """Generate cache key from function name and arguments."""
+        key_data = f"{func_name}_{str(args)}_{str(sorted(kwargs.items()))}"
+        return hashlib.md5(key_data.encode()).hexdigest()
+
+    def is_cache_valid(self, cache_file):
+        """Check if cache file exists and is not expired."""
+        if not cache_file.exists():
+            return False
+
+        # Check expiration
+        cache_age = time.time() - cache_file.stat().st_mtime
+        return cache_age < (self.expire_hours * 3600)
+
+    def cache_result(self, func):
+        """Decorator to cache function results."""
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # Generate cache key
+            cache_key = self.cache_key(func.__name__, args, kwargs)
+            cache_file = self.cache_dir / f"{cache_key}.pkl"
+
+            # Check cache
+            if self.is_cache_valid(cache_file):
+                print(f"Loading cached result for {func.__name__}")
+                with open(cache_file, 'rb') as f:
+                    return pickle.load(f)
+
+            # Execute function
+            print(f"Computing {func.__name__}")
+            result = func(*args, **kwargs)
+
+            # Cache result
+            with open(cache_file, 'wb') as f:
+                pickle.dump(result, f)
+
+            return result
+
+        return wrapper
+
+# Usage
+cache = AdvancedCache()
+
+@cache.cache_result
+def expensive_computation(data_file, analysis_type='full'):
+    """Expensive data analysis function."""
+    print(f"Performing {analysis_type} analysis on {data_file}")
+    time.sleep(5)  # Simulate expensive computation
+
+    df = pd.read_csv(data_file)
+
+    if analysis_type == 'full':
+        return df.describe()
+    else:
+        return df.head()
+
+# This will compute and cache
+result1 = expensive_computation('data.csv', 'full')
+
+# This will load from cache
+result2 = expensive_computation('data.csv', 'full')
+```
+
+### Memory-Efficient Processing
+
+```python
+# memory-efficient.py
+import pandas as pd
+import numpy as np
+from contextlib import contextmanager
+import gc
+import psutil
+import os
+
+class MemoryOptimizer:
+    """Memory optimization utilities for large-scale data processing."""
+
+    @staticmethod
+    @contextmanager
+    def memory_monitor(operation_name):
+        """Context manager to monitor memory usage."""
+        process = psutil.Process(os.getpid())
+        start_memory = process.memory_info().rss / 1024 / 1024  # MB
+
+        print(f"Starting {operation_name} - Memory: {start_memory:.1f} MB")
+
+        try:
+            yield
+        finally:
+            gc.collect()  # Force garbage collection
+            end_memory = process.memory_info().rss / 1024 / 1024  # MB
+            print(f"Finished {operation_name} - Memory: {end_memory:.1f} MB "
+                  f"(Δ {end_memory - start_memory:+.1f} MB)")
+
+    @staticmethod
+    def optimize_dtypes(df):
+        """Optimize DataFrame data types to reduce memory usage."""
+        original_memory = df.memory_usage(deep=True).sum() / 1024**2
+
+        # Optimize numeric columns
+        for col in df.select_dtypes(include=[np.number]).columns:
+            col_min = df[col].min()
+            col_max = df[col].max()
+
+            if df[col].dtype == 'int64':
+                if col_min >= -128 and col_max <= 127:
+                    df[col] = df[col].astype('int8')
+                elif col_min >= -32768 and col_max <= 32767:
+                    df[col] = df[col].astype('int16')
+                elif col_min >= -2147483648 and col_max <= 2147483647:
+                    df[col] = df[col].astype('int32')
+
+            elif df[col].dtype == 'float64':
+                df[col] = pd.to_numeric(df[col], downcast='float')
+
+        # Optimize object columns
+        for col in df.select_dtypes(include=['object']).columns:
+            num_unique_values = len(df[col].unique())
+            num_total_values = len(df[col])
+
+            if num_unique_values / num_total_values < 0.5:
+                df[col] = df[col].astype('category')
+
+        optimized_memory = df.memory_usage(deep=True).sum() / 1024**2
+        savings = (1 - optimized_memory / original_memory) * 100
+
+        print(f"Memory optimization: {original_memory:.1f} MB → {optimized_memory:.1f} MB "
+              f"({savings:.1f}% savings)")
+
+        return df
+
+    @staticmethod
+    def chunked_processing(file_path, chunk_size=10000, processing_func=None):
+        """Process large files in chunks to manage memory."""
+
+        results = []
+
+        with MemoryOptimizer.memory_monitor("Chunked processing"):
+            for chunk_num, chunk in enumerate(pd.read_csv(file_path, chunksize=chunk_size)):
+                print(f"Processing chunk {chunk_num + 1}")
+
+                # Optimize chunk
+                chunk = MemoryOptimizer.optimize_dtypes(chunk)
+
+                # Apply processing function if provided
+                if processing_func:
+                    processed_chunk = processing_func(chunk)
+                    results.append(processed_chunk)
+                else:
+                    results.append(chunk)
+
+                # Clear chunk from memory
+                del chunk
+                gc.collect()
+
+        return pd.concat(results, ignore_index=True) if results else None
+
+# Usage in Quarto document
+```
+
+````markdown
+```{python}
+#| echo: false
+from memory_efficient import MemoryOptimizer
+
+# Process large dataset efficiently
+def analyze_chunk(chunk):
+    """Analysis function for each chunk."""
+    return chunk.groupby('category').agg({
+        'sales': ['sum', 'mean'],
+        'quantity': 'sum'
+    }).reset_index()
+
+# Process large file in chunks
+with MemoryOptimizer.memory_monitor("Large dataset analysis"):
+    results = MemoryOptimizer.chunked_processing(
+        'large_sales_data.csv',
+        chunk_size=50000,
+        processing_func=analyze_chunk
+    )
+
+print("Analysis complete")
+print(results.head())
+```
+````

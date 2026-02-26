@@ -1,0 +1,16 @@
+# Rust project mise configuration
+# Usage: Copy to project root as .mise.toml
+#
+# Rust toolchain for systems/CLI work. Bun included for
+# scripting, task runners, and JS/TS tooling.
+
+[tools]
+bun = "latest"
+rust = "latest"
+
+[settings]
+experimental = true
+
+[env]
+CARGO_TERM_COLOR = "always"
+RUSTFLAGS = "-D warnings"

@@ -1,0 +1,36 @@
+# bootc Installation Configuration
+# Place this file at /usr/lib/bootc/install/50-custom.toml in your container image
+
+[install]
+# Supported block device backends for to-disk installations
+# First entry is the default
+block = ["direct", "tpm2-luks"]
+
+# Kernel arguments to append during installation
+kargs = [
+    "mitigations=auto,nosmt",
+    "console=tty0",
+    "console=ttyS0,115200n8",
+    "elevator=mq-deadline",
+    "systemd.unified_cgroup_hierarchy=1"
+]
+
+# Architecture filtering - only apply this config on these architectures
+match_architectures = ["x86_64", "aarch64"]
+
+[install.filesystem]
+# Root filesystem configuration
+[install.filesystem.root]
+type = "xfs"
+
+# Optional: Separate /var partition
+[install.filesystem.separate-var]
+path = "/var"
+size_mb = 10240
+type = "xfs"
+
+# Optional: Separate /home partition
+[install.filesystem.separate-home]
+path = "/home"
+size_mb = 20480
+type = "ext4"

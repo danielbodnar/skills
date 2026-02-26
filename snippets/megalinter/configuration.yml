@@ -1,0 +1,255 @@
+# MegaLinter Configuration Examples
+# File: .mega-linter.yml
+
+# === Basic Configuration ===
+APPLY_FIXES: all              # Apply fixes automatically
+DEFAULT_BRANCH: main          # Default branch name
+FILEIO_REPORTER: true         # Enable file output
+SHOW_ELAPSED_TIME: true       # Show execution time
+PARALLEL: true                # Run linters in parallel
+LOG_LEVEL: INFO               # Logging level (DEBUG, INFO, WARNING)
+
+# === Linter Selection ===
+# Enable specific linters only
+ENABLE_LINTERS:
+  - JAVASCRIPT_ES
+  - TYPESCRIPT_ES
+  - JSON_JSONLINT
+  - YAML_YAMLLINT
+  - MARKDOWN_MARKDOWNLINT
+  - DOCKERFILE_HADOLINT
+  - BASH_SHELLCHECK
+
+# Disable specific linters
+DISABLE_LINTERS:
+  - SPELL_CSPELL              # Can be noisy
+  - COPYPASTE_JSCPD           # May need tuning
+  - REPOSITORY_CHECKOV        # Can be overwhelming
+
+# Enable linters by language
+ENABLE_LANGUAGES:
+  - JAVASCRIPT
+  - TYPESCRIPT
+  - PYTHON
+  - GO
+
+# Disable languages
+DISABLE_LANGUAGES:
+  - PHP
+  - RUBY
+
+# === File Filtering ===
+# Include only specific directories/files
+FILTER_REGEX_INCLUDE: "(src/|lib/|scripts/)"
+
+# Exclude directories/files
+FILTER_REGEX_EXCLUDE: "(node_modules/|\\.git/|dist/|build/|\\.next/)"
+
+# Language-specific filtering
+JAVASCRIPT_FILTER_REGEX_EXCLUDE: "(test/|spec/|__tests__/)"
+TYPESCRIPT_FILTER_REGEX_EXCLUDE: "(\\.d\\.ts$)"
+PYTHON_FILTER_REGEX_EXCLUDE: "(test_|tests/)"
+
+# === Reporter Configuration ===
+REPORTERS:
+  - console                   # Terminal output
+  - github_comment           # GitHub PR comments
+  - github_status            # GitHub status checks
+  - sarif                    # SARIF format
+  - json                     # JSON output
+  - html                     # HTML report
+
+# Reporter settings
+SARIF_REPORTER: true
+JSON_REPORTER: true
+HTML_REPORTER: true
+REPORT_OUTPUT_FOLDER: reports
+
+# Custom report file names
+SARIF_REPORTER_FILE_NAME: megalinter-report.sarif
+JSON_REPORTER_FILE_NAME: megalinter-report.json
+HTML_REPORTER_FILE_NAME: megalinter-report.html
+
+# === Linter-Specific Configuration ===
+# JavaScript/TypeScript
+JAVASCRIPT_ES_CONFIG_FILE: .eslintrc.json
+JAVASCRIPT_ES_RULES_PATH: .eslintrc.json
+JAVASCRIPT_PRETTIER_CONFIG_FILE: .prettierrc.json
+TYPESCRIPT_ES_CONFIG_FILE: .eslintrc.json
+TYPESCRIPT_PRETTIER_CONFIG_FILE: .prettierrc.json
+
+# Python
+PYTHON_BLACK_CONFIG_FILE: pyproject.toml
+PYTHON_PYLINT_CONFIG_FILE: .pylintrc
+PYTHON_FLAKE8_CONFIG_FILE: setup.cfg
+PYTHON_MYPY_CONFIG_FILE: mypy.ini
+
+# Go
+GO_GOLANGCI_LINT_CONFIG_FILE: .golangci.yml
+
+# Markdown
+MARKDOWN_MARKDOWNLINT_CONFIG_FILE: .markdownlint.json
+
+# YAML
+YAML_YAMLLINT_CONFIG_FILE: .yamllint.yml
+
+# Docker
+DOCKERFILE_HADOLINT_CONFIG_FILE: .hadolint.yaml
+
+# === Auto-Fix Configuration ===
+# Apply fixes for all linters
+APPLY_FIXES: all
+
+# Apply fixes for specific linters
+APPLY_FIXES:
+  - JAVASCRIPT_PRETTIER
+  - TYPESCRIPT_PRETTIER
+  - PYTHON_BLACK
+  - GO_GOFMT
+  - JSON_JSONLINT
+  - YAML_PRETTIER
+
+# Disable auto-fix for specific linters
+APPLY_FIXES_IF_PR: true       # Only apply fixes in PRs
+APPLY_FIXES_MODE: commit      # commit or pull_request
+
+# === Pre/Post Commands ===
+PRE_COMMANDS:
+  - command: npm install
+    cwd: "workspace"
+  - command: pip install -r requirements.txt
+    cwd: "workspace"
+  - command: go mod download
+    cwd: "workspace"
+
+POST_COMMANDS:
+  - command: npm run test
+    cwd: "workspace"
+  - command: npm run build
+    cwd: "workspace"
+
+# === Advanced Configuration ===
+# Custom linter arguments
+JAVASCRIPT_ES_ARGUMENTS: "--max-warnings 0"
+PYTHON_PYLINT_ARGUMENTS: "--load-plugins=pylint_django"
+GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m"
+
+# Error handling
+DISABLE_ERRORS: false         # Set to true to always return success
+FAIL_IF_MISSING_LINTER_IN_FLAVOR: true
+FAIL_IF_UPDATED_SOURCES: false
+
+# Performance settings
+PARALLEL: true
+SHOW_ELAPSED_TIME: true
+CLEAR_REPORT_FOLDER: true
+
+# === Security-Focused Configuration ===
+# Enable security linters
+ENABLE_LINTERS:
+  - REPOSITORY_TRUFFLEHOG     # Secrets detection
+  - REPOSITORY_SEMGREP        # Security analysis
+  - PYTHON_BANDIT            # Python security
+  - JAVASCRIPT_ES            # ESLint security rules
+  - DOCKERFILE_HADOLINT      # Docker security
+
+# Security linter settings
+REPOSITORY_TRUFFLEHOG_ARGUMENTS: "--exclude-paths .trufflehogignore"
+REPOSITORY_SEMGREP_ARGUMENTS: "--config=auto"
+PYTHON_BANDIT_ARGUMENTS: "-r ."
+
+# === Multi-Project Configuration ===
+# For monorepos or multi-project repositories
+# Project 1: Frontend
+JAVASCRIPT_FILTER_REGEX_INCLUDE: "(frontend/|client/)"
+TYPESCRIPT_FILTER_REGEX_INCLUDE: "(frontend/|client/)"
+
+# Project 2: Backend
+PYTHON_FILTER_REGEX_INCLUDE: "(backend/|api/)"
+GO_FILTER_REGEX_INCLUDE: "(services/|cmd/)"
+
+# === Flavor-Specific Optimizations ===
+# JavaScript/TypeScript flavor configuration
+ENABLE_LINTERS:
+  - JAVASCRIPT_ES
+  - JAVASCRIPT_PRETTIER
+  - TYPESCRIPT_ES
+  - TYPESCRIPT_PRETTIER
+  - JSON_JSONLINT
+  - YAML_YAMLLINT
+  - MARKDOWN_MARKDOWNLINT
+
+# Disable heavy linters for faster execution
+DISABLE_LINTERS:
+  - COPYPASTE_JSCPD
+  - SPELL_CSPELL
+  - REPOSITORY_CHECKOV
+
+# === CI/CD Specific Settings ===
+# GitHub Actions
+VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+DEFAULT_BRANCH: main
+GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# GitLab CI
+DEFAULT_BRANCH: $CI_DEFAULT_BRANCH
+GITLAB_ACCESS_TOKEN: $GITLAB_ACCESS_TOKEN
+
+# Azure DevOps
+DEFAULT_BRANCH: $(Build.SourceBranch)
+SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+# === Custom Docker Image ===
+# Use custom MegaLinter image
+CONTAINER_IMAGE_ID: custom/megalinter:latest
+
+# === Ignore Files Integration ===
+# Respect .gitignore
+FILTER_REGEX_EXCLUDE: |
+  (
+    node_modules/|
+    \.git/|
+    dist/|
+    build/|
+    coverage/|
+    \.nyc_output/|
+    __pycache__/|
+    \.pytest_cache/|
+    target/|
+    bin/|
+    obj/
+  )
+
+# === Language-Specific Examples ===
+
+# Python Project Configuration
+ENABLE_LINTERS:
+  - PYTHON_BLACK             # Code formatting
+  - PYTHON_PYLINT            # Code analysis
+  - PYTHON_FLAKE8            # Style guide
+  - PYTHON_MYPY              # Type checking
+  - PYTHON_BANDIT            # Security
+  - YAML_YAMLLINT            # YAML files
+  - JSON_JSONLINT            # JSON files
+
+PYTHON_BLACK_ARGUMENTS: "--line-length 88"
+PYTHON_PYLINT_ARGUMENTS: "--max-line-length=88"
+PYTHON_FLAKE8_ARGUMENTS: "--max-line-length=88"
+
+# Go Project Configuration
+ENABLE_LINTERS:
+  - GO_GOLANGCI_LINT         # Go linter aggregator
+  - YAML_YAMLLINT            # YAML files
+  - JSON_JSONLINT            # JSON files
+  - DOCKERFILE_HADOLINT      # Dockerfiles
+
+GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=10m --enable-all"
+
+# Rust Project Configuration
+ENABLE_LINTERS:
+  - RUST_CLIPPY              # Rust linter
+  - YAML_YAMLLINT            # YAML files
+  - JSON_JSONLINT            # JSON files
+  - DOCKERFILE_HADOLINT      # Dockerfiles
+
+RUST_CLIPPY_ARGUMENTS: "-- -D warnings"

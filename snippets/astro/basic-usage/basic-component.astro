@@ -1,0 +1,36 @@
+---
+// Component script (runs on server)
+const title = "Welcome to Astro";
+const items = ["Fast", "Flexible", "Framework-agnostic"];
+---
+
+<!-- Component template (HTML with dynamic content) -->
+<div class="welcome">
+  <h1>{title}</h1>
+  <ul>
+    {items.map(item => <li>{item}</li>)}
+  </ul>
+</div>
+
+<style>
+  .welcome {
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+  }
+  
+  h1 {
+    margin: 0 0 1rem 0;
+    font-size: 2rem;
+  }
+  
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  li {
+    padding: 0.5rem 0;
+  }
+</style>

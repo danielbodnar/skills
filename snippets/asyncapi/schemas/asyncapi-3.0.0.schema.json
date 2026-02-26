@@ -1,0 +1,804 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://www.asyncapi.com/schemas/3.0.0.json",
+  "title": "AsyncAPI 3.0.0 Schema",
+  "description": "JSON Schema for AsyncAPI Specification v3.0.0",
+  "type": "object",
+  "required": ["asyncapi", "info"],
+  "properties": {
+    "asyncapi": {
+      "type": "string",
+      "const": "3.0.0",
+      "description": "The AsyncAPI specification version being used."
+    },
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "description": "Identifier of the application the AsyncAPI document is describing."
+    },
+    "info": {
+      "$ref": "#/definitions/info"
+    },
+    "servers": {
+      "type": "object",
+      "patternProperties": {
+        "^[A-Za-z0-9_\\-]+$": {
+          "$ref": "#/definitions/server"
+        }
+      },
+      "description": "Provides connection details of servers."
+    },
+    "defaultContentType": {
+      "type": "string",
+      "description": "Default content type to use when encoding/decoding a message's payload."
+    },
+    "channels": {
+      "type": "object",
+      "patternProperties": {
+        "^[A-Za-z0-9_\\-]+$": {
+          "$ref": "#/definitions/channel"
+        }
+      },
+      "description": "The channels used by this application."
+    },
+    "operations": {
+      "type": "object",
+      "patternProperties": {
+        "^[A-Za-z0-9_\\-]+$": {
+          "$ref": "#/definitions/operation"
+        }
+      },
+      "description": "The operations this application MUST implement."
+    },
+    "components": {
+      "$ref": "#/definitions/components"
+    }
+  },
+  "definitions": {
+    "info": {
+      "type": "object",
+      "required": ["title", "version"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the application."
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the application API."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the application."
+        },
+        "termsOfService": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL to the Terms of Service for the API."
+        },
+        "contact": {
+          "$ref": "#/definitions/contact"
+        },
+        "license": {
+          "$ref": "#/definitions/license"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tag"
+          },
+          "description": "A list of tags for application API documentation control."
+        },
+        "externalDocs": {
+          "$ref": "#/definitions/externalDocs"
+        }
+      }
+    },
+    "contact": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The identifying name of the contact person/organization."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "The URL pointing to the contact information."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email address of the contact person/organization."
+        }
+      }
+    },
+    "license": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The license name used for the API."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL to the license used for the API."
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "required": ["host", "protocol"],
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "The server host name."
+        },
+        "protocol": {
+          "type": "string",
+          "description": "The protocol this server supports for connection."
+        },
+        "protocolVersion": {
+          "type": "string",
+          "description": "The version of the protocol used for connection."
+        },
+        "pathname": {
+          "type": "string",
+          "description": "The path to a resource in the host."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional string describing the server."
+        },
+        "title": {
+          "type": "string",
+          "description": "A human-friendly title for the server."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A brief summary of the server."
+        },
+        "variables": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Za-z0-9_\\-]+$": {
+              "$ref": "#/definitions/serverVariable"
+            }
+          }
+        },
+        "security": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/securityScheme"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tag"
+          }
+        },
+        "externalDocs": {
+          "$ref": "#/definitions/externalDocs"
+        },
+        "bindings": {
+          "$ref": "#/definitions/serverBindings"
+        }
+      }
+    },
+    "serverVariable": {
+      "type": "object",
+      "properties": {
+        "enum": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "An enumeration of string values to be used if the substitution options are from a limited set."
+        },
+        "default": {
+          "type": "string",
+          "description": "The default value to use for substitution."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional description for the server variable."
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "An array of examples of the server variable."
+        }
+      }
+    },
+    "channel": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "description": "An optional string representation of this channel's address."
+        },
+        "messages": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Za-z0-9_\\-]+$": {
+              "$ref": "#/definitions/message"
+            }
+          }
+        },
+        "title": {
+          "type": "string",
+          "description": "A human-readable title for the channel."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A brief summary of the channel."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional description of this channel."
+        },
+        "servers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/reference"
+          },
+          "description": "The servers on which this channel is available."
+        },
+        "parameters": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Za-z0-9_\\-]+$": {
+              "$ref": "#/definitions/parameter"
+            }
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tag"
+          }
+        },
+        "externalDocs": {
+          "$ref": "#/definitions/externalDocs"
+        },
+        "bindings": {
+          "$ref": "#/definitions/channelBindings"
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "required": ["action", "channel"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["send", "receive"],
+          "description": "Use send when it's expected that the application will send a message to the given channel, and receive when the application should expect receiving messages from the given channel."
+        },
+        "channel": {
+          "$ref": "#/definitions/reference",
+          "description": "A reference to the definition of the channel in which the operation is performed."
+        },
+        "title": {
+          "type": "string",
+          "description": "A human-readable title for the operation."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A brief summary of what the operation is about."
+        },
+        "description": {
+          "type": "string",
+          "description": "A verbose explanation of the operation."
+        },
+        "security": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/securityScheme"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tag"
+          }
+        },
+        "externalDocs": {
+          "$ref": "#/definitions/externalDocs"
+        },
+        "bindings": {
+          "$ref": "#/definitions/operationBindings"
+        },
+        "traits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/operationTrait"
+          }
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/reference"
+          }
+        },
+        "reply": {
+          "$ref": "#/definitions/operationReply"
+        }
+      }
+    },
+    "message": {
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "type": "string",
+          "description": "Unique string used to identify the message."
+        },
+        "headers": {
+          "oneOf": [
+            {"$ref": "#/definitions/reference"},
+            {"$ref": "#/definitions/multiFormatSchema"}
+          ]
+        },
+        "payload": {
+          "oneOf": [
+            {"$ref": "#/definitions/reference"},
+            {"$ref": "#/definitions/multiFormatSchema"}
+          ]
+        },
+        "correlationId": {
+          "$ref": "#/definitions/correlationId"
+        },
+        "contentType": {
+          "type": "string",
+          "description": "The content type to use when encoding/decoding a message's payload."
+        },
+        "name": {
+          "type": "string",
+          "description": "A machine-friendly name for the message."
+        },
+        "title": {
+          "type": "string",
+          "description": "A human-readable title for the message."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A brief summary of the message."
+        },
+        "description": {
+          "type": "string",
+          "description": "A verbose explanation of the message."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tag"
+          }
+        },
+        "externalDocs": {
+          "$ref": "#/definitions/externalDocs"
+        },
+        "bindings": {
+          "$ref": "#/definitions/messageBindings"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/messageExample"
+          }
+        },
+        "traits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/messageTrait"
+          }
+        }
+      }
+    },
+    "multiFormatSchema": {
+      "type": "object",
+      "properties": {
+        "schemaFormat": {
+          "type": "string",
+          "description": "A string containing the name of the schema format used to define the message payload."
+        },
+        "schema": {
+          "description": "Definition of the message payload."
+        }
+      }
+    },
+    "parameter": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "A verbose explanation of the parameter."
+        },
+        "schema": {
+          "$ref": "#/definitions/multiFormatSchema"
+        },
+        "location": {
+          "type": "string",
+          "description": "A runtime expression that specifies the location of the parameter value."
+        }
+      }
+    },
+    "correlationId": {
+      "type": "object",
+      "required": ["location"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "An optional description of the identifier."
+        },
+        "location": {
+          "type": "string",
+          "description": "A runtime expression that specifies the location of the correlation ID."
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "required": ["$ref"],
+      "properties": {
+        "$ref": {
+          "type": "string",
+          "format": "uri-reference"
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "properties": {
+        "schemas": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/multiFormatSchema"
+            }
+          }
+        },
+        "servers": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/server"
+            }
+          }
+        },
+        "channels": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/channel"
+            }
+          }
+        },
+        "operations": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/operation"
+            }
+          }
+        },
+        "messages": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/message"
+            }
+          }
+        },
+        "securitySchemes": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/securityScheme"
+            }
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/parameter"
+            }
+          }
+        },
+        "correlationIds": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/correlationId"
+            }
+          }
+        },
+        "replies": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/operationReply"
+            }
+          }
+        },
+        "replyAddresses": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/replyAddress"
+            }
+          }
+        },
+        "externalDocs": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/externalDocs"
+            }
+          }
+        },
+        "tags": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/tag"
+            }
+          }
+        },
+        "operationTraits": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/operationTrait"
+            }
+          }
+        },
+        "messageTraits": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/messageTrait"
+            }
+          }
+        },
+        "serverBindings": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/serverBindings"
+            }
+          }
+        },
+        "channelBindings": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/channelBindings"
+            }
+          }
+        },
+        "operationBindings": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/operationBindings"
+            }
+          }
+        },
+        "messageBindings": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9\\.\\-_]+$": {
+              "$ref": "#/definitions/messageBindings"
+            }
+          }
+        }
+      }
+    },
+    "tag": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the tag."
+        },
+        "description": {
+          "type": "string",
+          "description": "A short description for the tag."
+        },
+        "externalDocs": {
+          "$ref": "#/definitions/externalDocs"
+        }
+      }
+    },
+    "externalDocs": {
+      "type": "object",
+      "required": ["url"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "A short description of the target documentation."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "The URL for the target documentation."
+        }
+      }
+    },
+    "securityScheme": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["userPassword", "apiKey", "X509", "symmetricEncryption", "asymmetricEncryption", "httpApiKey", "http", "oauth2", "openIdConnect", "plain", "scramSha256", "scramSha512", "gssapi"]
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "apiKey"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "in": {
+                "type": "string",
+                "enum": ["header", "query", "cookie"]
+              }
+            },
+            "required": ["in"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "http"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "scheme": {
+                "type": "string"
+              }
+            },
+            "required": ["scheme"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "oauth2"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "flows": {
+                "$ref": "#/definitions/oauthFlows"
+              }
+            },
+            "required": ["flows"]
+          }
+        }
+      ]
+    },
+    "oauthFlows": {
+      "type": "object",
+      "properties": {
+        "implicit": {
+          "$ref": "#/definitions/oauthFlow"
+        },
+        "password": {
+          "$ref": "#/definitions/oauthFlow"
+        },
+        "clientCredentials": {
+          "$ref": "#/definitions/oauthFlow"
+        },
+        "authorizationCode": {
+          "$ref": "#/definitions/oauthFlow"
+        }
+      }
+    },
+    "oauthFlow": {
+      "type": "object",
+      "properties": {
+        "authorizationUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "tokenUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "refreshUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "availableScopes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "operationReply": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/replyAddress"
+        },
+        "channel": {
+          "$ref": "#/definitions/reference"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/reference"
+          }
+        }
+      }
+    },
+    "replyAddress": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        }
+      }
+    },
+    "messageExample": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object"
+        },
+        "payload": {}
+      }
+    },
+    "operationTrait": {
+      "type": "object"
+    },
+    "messageTrait": {
+      "type": "object"
+    },
+    "serverBindings": {
+      "type": "object"
+    },
+    "channelBindings": {
+      "type": "object"
+    },
+    "operationBindings": {
+      "type": "object"
+    },
+    "messageBindings": {
+      "type": "object"
+    }
+  }
+}

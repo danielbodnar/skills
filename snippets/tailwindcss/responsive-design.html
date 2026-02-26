@@ -1,0 +1,89 @@
+<!-- Responsive design examples with TailwindCSS -->
+
+<!-- Basic responsive layout -->
+<div class="mx-auto max-w-md overflow-hidden rounded-xl bg-white shadow-md md:max-w-2xl">
+  <div class="md:flex">
+    <div class="md:shrink-0">
+      <img class="h-48 w-full object-cover md:h-full md:w-48" src="/img/building.jpg" alt="Modern building" />
+    </div>
+    <div class="p-8">
+      <div class="text-sm font-semibold tracking-wide text-indigo-500 uppercase">Company retreats</div>
+      <a href="#" class="mt-1 block text-lg leading-tight font-medium text-black hover:underline">
+        Incredible accommodation for your team
+      </a>
+      <p class="mt-2 text-gray-500">Looking to take your team away on a retreat...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Responsive grid -->
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+  <div class="rounded-lg bg-white p-6 shadow">Item 1</div>
+  <div class="rounded-lg bg-white p-6 shadow">Item 2</div>
+  <div class="rounded-lg bg-white p-6 shadow">Item 3</div>
+  <div class="rounded-lg bg-white p-6 shadow">Item 4</div>
+</div>
+
+<!-- Responsive text and spacing -->
+<div class="px-4 py-8 sm:px-6 lg:px-8">
+  <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl lg:text-4xl">
+    Responsive Heading
+  </h1>
+  <p class="mt-4 text-base text-gray-600 sm:text-lg lg:text-xl">
+    This text scales with screen size.
+  </p>
+</div>
+
+<!-- Mobile-first responsive navigation -->
+<nav class="bg-white shadow">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <img class="h-8 w-8" src="/img/logo.svg" alt="Logo" />
+        </div>
+        <div class="hidden md:ml-6 md:flex md:space-x-8">
+          <a href="#" class="text-gray-900 hover:text-gray-700 px-3 py-2 text-sm font-medium">Home</a>
+          <a href="#" class="text-gray-900 hover:text-gray-700 px-3 py-2 text-sm font-medium">About</a>
+          <a href="#" class="text-gray-900 hover:text-gray-700 px-3 py-2 text-sm font-medium">Contact</a>
+        </div>
+      </div>
+      <!-- Mobile menu button -->
+      <div class="md:hidden">
+        <button class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100">
+          <span class="sr-only">Open main menu</span>
+          <!-- Menu icon -->
+          <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Responsive image -->
+<img class="w-16 md:w-32 lg:w-48" src="/img/example.jpg" alt="Responsive image" />
+
+<!-- Container queries -->
+<div class="@container">
+  <div class="flex flex-col @md:flex-row">
+    <div class="@md:w-1/2">Content 1</div>
+    <div class="@md:w-1/2">Content 2</div>
+  </div>
+</div>
+
+<!-- Arbitrary breakpoints -->
+<div class="max-[600px]:bg-sky-300 min-[320px]:text-center">
+  Custom breakpoint content
+</div>
+
+<!-- Targeting specific breakpoint ranges -->
+<div class="md:max-xl:flex">
+  Only flex between md and xl
+</div>
+
+<!-- Single breakpoint target -->
+<div class="md:max-lg:flex">
+  Only flex at md breakpoint
+</div>

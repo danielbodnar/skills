@@ -1,0 +1,116 @@
+# VyOS AWS Deployment Configuration
+
+# AWS-specific network configuration for VyOS
+configure
+
+# Disable source/destination check (done in AWS console)
+# set interfaces ethernet eth0 ip disable-arp-filter
+# set interfaces ethernet eth0 ip enable-arp-accept
+# set interfaces ethernet eth0 ip enable-arp-announce
+# set interfaces ethernet eth0 ip enable-arp-ignore
+
+# Interface configuration using AWS private IPs
+set interfaces ethernet eth0 address '10.0.1.100/24'
+set interfaces ethernet eth0 description 'Private Subnet Interface'
+
+# Default route via AWS VPC gateway
+set protocols static route 0.0.0.0/0 next-hop '10.0.1.1'
+
+# AWS-specific system configuration
+set system host-name 'vyos-aws-router'
+set system domain-name 'aws.internal'
+
+# Use AWS-provided DNS
+set system name-server '169.254.169.253'
+set system name-server '8.8.8.8'
+
+# NTP configuration for AWS
+set system ntp server '169.254.169.123'
+set system ntp server '0.amazon.pool.ntp.org'
+
+# SSH configuration for AWS key pairs
+set service ssh port '22'
+set service ssh disable-password-authentication
+
+# CloudWatch monitoring (if agent installed)
+# set system option performance 'throughput'
+# set system option performance 'latency'
+
+# Security groups simulation with firewall
+set firewall name AWS-SECURITY-GROUP default-action 'drop'
+set firewall name AWS-SECURITY-GROUP rule 10 action 'accept'
+set firewall name AWS-SECURITY-GROUP rule 10 state established 'enable'
+set firewall name AWS-SECURITY-GROUP rule 10 state related 'enable'
+
+# Allow SSH from management subnet
+set firewall name AWS-SECURITY-GROUP rule 20 action 'accept'
+set firewall name AWS-SECURITY-GROUP rule 20 destination port '22'
+set firewall name AWS-SECURITY-GROUP rule 20 protocol 'tcp'
+set firewall name AWS-SECURITY-GROUP rule 20 source address '10.0.0.0/16'
+
+# Allow ICMP for health checks
+set firewall name AWS-SECURITY-GROUP rule 30 action 'accept'
+set firewall name AWS-SECURITY-GROUP rule 30 protocol 'icmp'
+
+# Apply firewall to interface
+set interfaces ethernet eth0 firewall in name 'AWS-SECURITY-GROUP'
+
+# BGP configuration for AWS Direct Connect or VPN
+set protocols bgp system-as '65000'
+set protocols bgp router-id '10.0.1.100'
+
+# BGP neighbor (AWS Virtual Gateway)
+set protocols bgp neighbor 169.254.100.1 remote-as '7224'
+set protocols bgp neighbor 169.254.100.1 description 'AWS VGW'
+set protocols bgp neighbor 169.254.100.1 soft-reconfiguration inbound
+
+# Advertise local networks
+set protocols bgp address-family ipv4-unicast network 10.0.1.0/24
+
+# Route filtering for AWS
+set policy prefix-list AWS-ROUTES rule 10 action 'permit'
+set policy prefix-list AWS-ROUTES rule 10 prefix '10.0.0.0/8'
+set policy prefix-list AWS-ROUTES rule 20 action 'permit'
+set policy prefix-list AWS-ROUTES rule 20 prefix '172.16.0.0/12'
+set policy prefix-list AWS-ROUTES rule 30 action 'permit'
+set policy prefix-list AWS-ROUTES rule 30 prefix '192.168.0.0/16'
+
+# Apply route filtering
+set policy route-map AWS-IN rule 10 action 'permit'
+set policy route-map AWS-IN rule 10 match ip address prefix-list 'AWS-ROUTES'
+
+set protocols bgp neighbor 169.254.100.1 address-family ipv4-unicast route-map import 'AWS-IN'
+
+# VPN configuration for site-to-site connectivity
+set vpn ipsec esp-group AWS compression
+set vpn ipsec esp-group AWS lifetime '3600'
+set vpn ipsec esp-group AWS mode 'tunnel'
+set vpn ipsec esp-group AWS pfs 'enable'
+set vpn ipsec esp-group AWS proposal 1 encryption 'aes128'
+set vpn ipsec esp-group AWS proposal 1 hash 'sha1'
+
+set vpn ipsec ike-group AWS dead-peer-detection action 'restart'
+set vpn ipsec ike-group AWS dead-peer-detection interval '15'
+set vpn ipsec ike-group AWS dead-peer-detection timeout '30'
+set vpn ipsec ike-group AWS lifetime '28800'
+set vpn ipsec ike-group AWS proposal 1 dh-group '2'
+set vpn ipsec ike-group AWS proposal 1 encryption 'aes128'
+set vpn ipsec ike-group AWS proposal 1 hash 'sha1'
+
+# Site-to-site VPN to AWS VPC
+set vpn ipsec site-to-site peer 52.1.2.3 authentication mode 'pre-shared-secret'
+set vpn ipsec site-to-site peer 52.1.2.3 authentication pre-shared-secret 'AwSPr3Sh4r3dK3y'
+set vpn ipsec site-to-site peer 52.1.2.3 ike-group 'AWS'
+set vpn ipsec site-to-site peer 52.1.2.3 local-address '10.0.1.100'
+set vpn ipsec site-to-site peer 52.1.2.3 tunnel 0 esp-group 'AWS'
+set vpn ipsec site-to-site peer 52.1.2.3 tunnel 0 local prefix '10.0.1.0/24'
+set vpn ipsec site-to-site peer 52.1.2.3 tunnel 0 remote prefix '10.0.2.0/24'
+
+# Logging for AWS CloudWatch (if configured)
+set system syslog global facility all level 'info'
+set system syslog host 127.0.0.1 facility all level 'info'
+set system syslog host 127.0.0.1 port '514'
+
+commit
+save
+exit

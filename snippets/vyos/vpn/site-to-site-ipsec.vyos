@@ -1,0 +1,56 @@
+# VyOS Site-to-Site IPsec VPN Configuration
+
+configure
+
+# ESP (Encryption) group
+set vpn ipsec esp-group ESP-1 compression
+set vpn ipsec esp-group ESP-1 lifetime '3600'
+set vpn ipsec esp-group ESP-1 mode 'tunnel'
+set vpn ipsec esp-group ESP-1 pfs 'dh-group2'
+set vpn ipsec esp-group ESP-1 proposal 1 encryption 'aes256'
+set vpn ipsec esp-group ESP-1 proposal 1 hash 'sha256'
+
+# IKE group
+set vpn ipsec ike-group IKE-1 dead-peer-detection action 'restart'
+set vpn ipsec ike-group IKE-1 dead-peer-detection interval '30'
+set vpn ipsec ike-group IKE-1 dead-peer-detection timeout '120'
+set vpn ipsec ike-group IKE-1 lifetime '86400'
+set vpn ipsec ike-group IKE-1 proposal 1 dh-group '2'
+set vpn ipsec ike-group IKE-1 proposal 1 encryption 'aes256'
+set vpn ipsec ike-group IKE-1 proposal 1 hash 'sha256'
+
+# Site-to-site peer configuration
+set vpn ipsec site-to-site peer 203.0.113.45 authentication mode 'pre-shared-secret'
+set vpn ipsec site-to-site peer 203.0.113.45 authentication pre-shared-secret 'MyS3cr3tK3y'
+set vpn ipsec site-to-site peer 203.0.113.45 ike-group 'IKE-1'
+set vpn ipsec site-to-site peer 203.0.113.45 local-address '198.51.100.3'
+set vpn ipsec site-to-site peer 203.0.113.45 tunnel 0 esp-group 'ESP-1'
+set vpn ipsec site-to-site peer 203.0.113.45 tunnel 0 local prefix '192.168.1.0/24'
+set vpn ipsec site-to-site peer 203.0.113.45 tunnel 0 remote prefix '192.168.100.0/24'
+
+# IPsec logging
+set vpn ipsec logging log-level '2'
+set vpn ipsec logging log-modes 'all'
+
+# Firewall rules for IPsec
+set firewall name OUTSIDE-IN rule 30 action 'accept'
+set firewall name OUTSIDE-IN rule 30 description 'Allow ESP'
+set firewall name OUTSIDE-IN rule 30 protocol 'esp'
+
+set firewall name OUTSIDE-IN rule 40 action 'accept'
+set firewall name OUTSIDE-IN rule 40 description 'Allow IKE'
+set firewall name OUTSIDE-IN rule 40 destination port '500'
+set firewall name OUTSIDE-IN rule 40 protocol 'udp'
+
+set firewall name OUTSIDE-IN rule 50 action 'accept'
+set firewall name OUTSIDE-IN rule 50 description 'Allow NAT-T'
+set firewall name OUTSIDE-IN rule 50 destination port '4500'
+set firewall name OUTSIDE-IN rule 50 protocol 'udp'
+
+# Interface configuration for VPN
+set interfaces ethernet eth0 address '198.51.100.3/30'
+set interfaces ethernet eth0 description 'WAN Interface'
+
+commit
+save
+exit

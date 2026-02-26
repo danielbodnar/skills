@@ -1,0 +1,231 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MegaLinter Configuration Schema",
+  "description": "Schema for .mega-linter.yml configuration file",
+  "type": "object",
+  "properties": {
+    "APPLY_FIXES": {
+      "description": "Apply fixes automatically",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["all", "none"]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z_]+$"
+          }
+        }
+      ]
+    },
+    "DEFAULT_BRANCH": {
+      "description": "Default branch name",
+      "type": "string",
+      "default": "main"
+    },
+    "FILEIO_REPORTER": {
+      "description": "Enable file output reporter",
+      "type": "boolean",
+      "default": true
+    },
+    "SHOW_ELAPSED_TIME": {
+      "description": "Show execution time",
+      "type": "boolean",
+      "default": true
+    },
+    "PARALLEL": {
+      "description": "Run linters in parallel",
+      "type": "boolean",
+      "default": true
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level",
+      "type": "string",
+      "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
+      "default": "INFO"
+    },
+    "ENABLE_LINTERS": {
+      "description": "List of linters to enable",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z_]+$"
+      }
+    },
+    "DISABLE_LINTERS": {
+      "description": "List of linters to disable",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z_]+$"
+      }
+    },
+    "ENABLE_LANGUAGES": {
+      "description": "List of languages to enable",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "BASH", "C", "CLOJURE", "COFFEE", "CPP", "CSHARP", "CSS", "DART",
+          "DOCKERFILE", "EDITORCONFIG", "ENV", "GO", "GROOVY", "HTML", "JAVA",
+          "JAVASCRIPT", "JSON", "JSX", "KOTLIN", "LATEX", "LUA", "MARKDOWN",
+          "PERL", "PHP", "POWERSHELL", "PROTOBUF", "PYTHON", "R", "RAKU",
+          "RUBY", "RUST", "SCALA", "SQL", "SWIFT", "TYPESCRIPT", "TSX",
+          "VBDOTNET", "XML", "YAML"
+        ]
+      }
+    },
+    "DISABLE_LANGUAGES": {
+      "description": "List of languages to disable",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "FILTER_REGEX_INCLUDE": {
+      "description": "Include files matching this regex",
+      "type": "string"
+    },
+    "FILTER_REGEX_EXCLUDE": {
+      "description": "Exclude files matching this regex",
+      "type": "string"
+    },
+    "REPORTERS": {
+      "description": "List of reporters to enable",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "console", "github_comment", "github_status", "gitlab_comment",
+          "azure_comment", "bitbucket_comment", "json", "sarif", "html",
+          "xml", "junit", "tap", "file"
+        ]
+      }
+    },
+    "SARIF_REPORTER": {
+      "description": "Enable SARIF reporter",
+      "type": "boolean"
+    },
+    "JSON_REPORTER": {
+      "description": "Enable JSON reporter",
+      "type": "boolean"
+    },
+    "HTML_REPORTER": {
+      "description": "Enable HTML reporter",
+      "type": "boolean"
+    },
+    "REPORT_OUTPUT_FOLDER": {
+      "description": "Output folder for reports",
+      "type": "string",
+      "default": "megalinter-reports"
+    },
+    "SARIF_REPORTER_FILE_NAME": {
+      "description": "SARIF report filename",
+      "type": "string",
+      "default": "megalinter-report.sarif"
+    },
+    "JSON_REPORTER_FILE_NAME": {
+      "description": "JSON report filename",
+      "type": "string",
+      "default": "megalinter-report.json"
+    },
+    "HTML_REPORTER_FILE_NAME": {
+      "description": "HTML report filename",
+      "type": "string",
+      "default": "megalinter-report.html"
+    },
+    "PRE_COMMANDS": {
+      "description": "Commands to run before linting",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          }
+        },
+        "required": ["command"]
+      }
+    },
+    "POST_COMMANDS": {
+      "description": "Commands to run after linting",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          }
+        },
+        "required": ["command"]
+      }
+    },
+    "VALIDATE_ALL_CODEBASE": {
+      "description": "Validate all files (not just changed)",
+      "type": "boolean"
+    },
+    "DISABLE_ERRORS": {
+      "description": "Never return error exit code",
+      "type": "boolean",
+      "default": false
+    },
+    "FAIL_IF_MISSING_LINTER_IN_FLAVOR": {
+      "description": "Fail if linter is missing in flavor",
+      "type": "boolean",
+      "default": true
+    },
+    "FAIL_IF_UPDATED_SOURCES": {
+      "description": "Fail if sources are updated by auto-fix",
+      "type": "boolean",
+      "default": false
+    },
+    "CLEAR_REPORT_FOLDER": {
+      "description": "Clear report folder before run",
+      "type": "boolean",
+      "default": true
+    },
+    "CONTAINER_IMAGE_ID": {
+      "description": "Custom Docker image to use",
+      "type": "string"
+    }
+  },
+  "patternProperties": {
+    "^[A-Z_]+_CONFIG_FILE$": {
+      "description": "Configuration file path for specific linter",
+      "type": "string"
+    },
+    "^[A-Z_]+_RULES_PATH$": {
+      "description": "Rules path for specific linter",
+      "type": "string"
+    },
+    "^[A-Z_]+_ARGUMENTS$": {
+      "description": "Custom arguments for specific linter",
+      "type": "string"
+    },
+    "^[A-Z_]+_FILTER_REGEX_INCLUDE$": {
+      "description": "Include filter for specific linter",
+      "type": "string"
+    },
+    "^[A-Z_]+_FILTER_REGEX_EXCLUDE$": {
+      "description": "Exclude filter for specific linter",
+      "type": "string"
+    },
+    "^[A-Z_]+_DISABLE_ERRORS$": {
+      "description": "Disable errors for specific linter",
+      "type": "boolean"
+    },
+    "^[A-Z_]+_DIRECTORY$": {
+      "description": "Working directory for specific linter",
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}

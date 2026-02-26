@@ -1,0 +1,414 @@
+// src/lib.rs.liquid - Library template with conditional features
+
+{% if use_documentation -%}
+#![doc = include_str!("../README.md")]
+{% endif -%}
+{% if use_strict_linting -%}
+#![warn(
+    missing_docs,
+    rust_2018_idioms,
+    unreachable_pub,
+    bad_style,
+    dead_code,
+    improper_ctypes,
+    non_shorthand_field_patterns,
+    no_mangle_generic_items,
+    overflowing_literals,
+    path_statements,
+    patterns_in_fns_without_body,
+    private_in_public,
+    unconditional_recursion,
+    unused,
+    unused_allocation,
+    unused_comparisons,
+    unused_parens,
+    while_true
+)]
+{% endif -%}
+
+{% if "serde" in features -%}
+use serde::{Deserialize, Serialize};
+{% endif -%}
+{% if "anyhow" in features -%}
+use anyhow::{Context, Result};
+{% endif -%}
+{% if "tracing" in features -%}
+use tracing::{debug, error, info, warn};
+{% endif -%}
+
+/// Main library documentation for {{project-name}}
+/// 
+/// {{project_description}}
+
+{% if "serde" in features -%}
+/// Configuration struct for the library
+#[derive(Debug, Clone, Serialize, Deserialize)]
+{% else -%}
+/// Configuration struct for the library
+#[derive(Debug, Clone)]
+{% endif -%}
+pub struct Config {
+    /// Application name
+    pub name: String,
+    /// Version string
+    pub version: String,
+    {% if use_async -%}
+    /// Enable async features
+    pub async_enabled: bool,
+    {% endif -%}
+    {% if "tracing" in features -%}
+    /// Log level
+    pub log_level: String,
+    {% endif -%}
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            name: "{{project-name}}".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            {% if use_async -%}
+            async_enabled: true,
+            {% endif -%}
+            {% if "tracing" in features -%}
+            log_level: "info".to_string(),
+            {% endif -%}
+        }
+    }
+}
+
+{% if use_error_handling -%}
+/// Error types for {{project-name}}
+#[derive(Debug, thiserror::Error)]
+pub enum {{project-name | pascal_case}}Error {
+    /// Configuration error
+    #[error("Configuration error: {0}")]
+    Config(String),
+    
+    /// IO error
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+    
+    {% if "serde" in features -%}
+    /// Serialization error
+    #[error("Serialization error: {0}")]
+    Serde(#[from] serde_json::Error),
+    {% endif -%}
+    
+    {% if "reqwest" in features -%}
+    /// HTTP request error
+    #[error("HTTP request error: {0}")]
+    Http(#[from] reqwest::Error),
+    {% endif -%}
+    
+    /// Generic error
+    #[error("Error: {0}")]
+    Generic(String),
+}
+
+/// Result type alias for this crate
+pub type Result<T> = std::result::Result<T, {{project-name | pascal_case}}Error>;
+{% endif -%}
+
+/// Main application struct
+pub struct {{project-name | pascal_case}} {
+    config: Config,
+    {% if use_state -%}
+    state: AppState,
+    {% endif -%}
+}
+
+{% if use_state -%}
+/// Application state
+#[derive(Debug, Default)]
+struct AppState {
+    initialized: bool,
+    {% if use_async -%}
+    runtime_handle: Option<tokio::runtime::Handle>,
+    {% endif -%}
+}
+{% endif -%}
+
+impl {{project-name | pascal_case}} {
+    /// Create a new instance with default configuration
+    pub fn new() -> Self {
+        Self {
+            config: Config::default(),
+            {% if use_state -%}
+            state: AppState::default(),
+            {% endif -%}
+        }
+    }
+    
+    /// Create a new instance with custom configuration
+    pub fn with_config(config: Config) -> Self {
+        Self {
+            config,
+            {% if use_state -%}
+            state: AppState::default(),
+            {% endif -%}
+        }
+    }
+    
+    {% if use_async -%}
+    /// Initialize the application asynchronously
+    pub async fn init(&mut self) -> {% if use_error_handling %}Result<()>{% else %}(){% endif %} {
+        {% if "tracing" in features -%}
+        info!("Initializing {} v{}", self.config.name, self.config.version);
+        {% endif -%}
+        
+        {% if use_state -%}
+        self.state.initialized = true;
+        if self.config.async_enabled {
+            self.state.runtime_handle = Some(tokio::runtime::Handle::current());
+        }
+        {% endif -%}
+        
+        {% if "tracing" in features -%}
+        info!("Initialization complete");
+        {% endif -%}
+        
+        {% if use_error_handling -%}
+        Ok(())
+        {% endif -%}
+    }
+    
+    /// Run the main application logic asynchronously
+    pub async fn run(&self) -> {% if use_error_handling %}Result<()>{% else %}(){% endif %} {
+        {% if "tracing" in features -%}
+        info!("Running application");
+        {% endif -%}
+        
+        // Main application logic here
+        self.process_data().await{% if use_error_handling %}?{% endif %};
+        
+        {% if "tracing" in features -%}
+        info!("Application finished successfully");
+        {% endif -%}
+        
+        {% if use_error_handling -%}
+        Ok(())
+        {% endif -%}
+    }
+    
+    /// Process data asynchronously
+    async fn process_data(&self) -> {% if use_error_handling %}Result<()>{% else %}(){% endif %} {
+        {% if "tracing" in features -%}
+        debug!("Processing data");
+        {% endif -%}
+        
+        // Simulate async work
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        
+        {% if use_error_handling -%}
+        Ok(())
+        {% endif -%}
+    }
+    {% else -%}
+    /// Initialize the application
+    pub fn init(&mut self) -> {% if use_error_handling %}Result<()>{% else %}(){% endif %} {
+        {% if "tracing" in features -%}
+        info!("Initializing {} v{}", self.config.name, self.config.version);
+        {% endif -%}
+        
+        {% if use_state -%}
+        self.state.initialized = true;
+        {% endif -%}
+        
+        {% if "tracing" in features -%}
+        info!("Initialization complete");
+        {% endif -%}
+        
+        {% if use_error_handling -%}
+        Ok(())
+        {% endif -%}
+    }
+    
+    /// Run the main application logic
+    pub fn run(&self) -> {% if use_error_handling %}Result<()>{% else %}(){% endif %} {
+        {% if "tracing" in features -%}
+        info!("Running application");
+        {% endif -%}
+        
+        // Main application logic here
+        self.process_data(){% if use_error_handling %}?{% endif %};
+        
+        {% if "tracing" in features -%}
+        info!("Application finished successfully");
+        {% endif -%}
+        
+        {% if use_error_handling -%}
+        Ok(())
+        {% endif -%}
+    }
+    
+    /// Process data
+    fn process_data(&self) -> {% if use_error_handling %}Result<()>{% else %}(){% endif %} {
+        {% if "tracing" in features -%}
+        debug!("Processing data");
+        {% endif -%}
+        
+        // Main processing logic here
+        
+        {% if use_error_handling -%}
+        Ok(())
+        {% endif -%}
+    }
+    {% endif -%}
+    
+    /// Get the current configuration
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+    
+    {% if use_state -%}
+    /// Check if the application is initialized
+    pub fn is_initialized(&self) -> bool {
+        self.state.initialized
+    }
+    {% endif -%}
+}
+
+impl Default for {{project-name | pascal_case}} {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+{% if use_utility_functions -%}
+/// Utility functions
+
+{% if "serde" in features -%}
+/// Serialize data to JSON string
+pub fn to_json<T: Serialize>(data: &T) -> {% if use_error_handling %}Result<String>{% else %}String{% endif %} {
+    {% if use_error_handling -%}
+    serde_json::to_string_pretty(data).map_err({{project-name | pascal_case}}Error::from)
+    {% else -%}
+    serde_json::to_string_pretty(data).unwrap_or_default()
+    {% endif -%}
+}
+
+/// Deserialize data from JSON string
+pub fn from_json<T: for<'de> Deserialize<'de>>(json: &str) -> {% if use_error_handling %}Result<T>{% else %}Option<T>{% endif %} {
+    {% if use_error_handling -%}
+    serde_json::from_str(json).map_err({{project-name | pascal_case}}Error::from)
+    {% else -%}
+    serde_json::from_str(json).ok()
+    {% endif -%}
+}
+{% endif -%}
+
+/// Get version information
+pub fn version_info() -> String {
+    format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
+}
+
+/// Get build information
+pub fn build_info() -> String {
+    format!(
+        "{} built on {} with Rust {}",
+        version_info(),
+        env!("BUILD_DATE"),
+        env!("RUSTC_VERSION")
+    )
+}
+{% endif -%}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_config_default() {
+        let config = Config::default();
+        assert_eq!(config.name, "{{project-name}}");
+        assert!(!config.version.is_empty());
+    }
+    
+    #[test]
+    fn test_app_creation() {
+        let app = {{project-name | pascal_case}}::new();
+        assert_eq!(app.config().name, "{{project-name}}");
+    }
+    
+    {% if use_async -%}
+    #[tokio::test]
+    async fn test_app_init() {
+        let mut app = {{project-name | pascal_case}}::new();
+        {% if use_error_handling -%}
+        assert!(app.init().await.is_ok());
+        {% else -%}
+        app.init().await;
+        {% endif -%}
+        {% if use_state -%}
+        assert!(app.is_initialized());
+        {% endif -%}
+    }
+    
+    #[tokio::test]
+    async fn test_app_run() {
+        let mut app = {{project-name | pascal_case}}::new();
+        {% if use_error_handling -%}
+        app.init().await.unwrap();
+        assert!(app.run().await.is_ok());
+        {% else -%}
+        app.init().await;
+        app.run().await;
+        {% endif -%}
+    }
+    {% else -%}
+    #[test]
+    fn test_app_init() {
+        let mut app = {{project-name | pascal_case}}::new();
+        {% if use_error_handling -%}
+        assert!(app.init().is_ok());
+        {% else -%}
+        app.init();
+        {% endif -%}
+        {% if use_state -%}
+        assert!(app.is_initialized());
+        {% endif -%}
+    }
+    
+    #[test]
+    fn test_app_run() {
+        let mut app = {{project-name | pascal_case}}::new();
+        {% if use_error_handling -%}
+        app.init().unwrap();
+        assert!(app.run().is_ok());
+        {% else -%}
+        app.init();
+        app.run();
+        {% endif -%}
+    }
+    {% endif -%}
+    
+    {% if use_utility_functions -%}
+    #[test]
+    fn test_version_info() {
+        let version = version_info();
+        assert!(version.contains("{{project-name}}"));
+        assert!(version.contains("v"));
+    }
+    
+    {% if "serde" in features -%}
+    #[test]
+    fn test_json_serialization() {
+        let config = Config::default();
+        {% if use_error_handling -%}
+        let json = to_json(&config).unwrap();
+        {% else -%}
+        let json = to_json(&config);
+        {% endif -%}
+        assert!(json.contains("{{project-name}}"));
+        
+        {% if use_error_handling -%}
+        let parsed: Config = from_json(&json).unwrap();
+        {% else -%}
+        let parsed: Config = from_json(&json).unwrap();
+        {% endif -%}
+        assert_eq!(parsed.name, config.name);
+    }
+    {% endif -%}
+    {% endif -%}
+}

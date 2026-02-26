@@ -1,0 +1,81 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "skills",
+  "metadata": {
+    "description": "Curated collection of Claude Code plugins, skills, references, and configurations for modern TypeScript/Bun development, SRE operations, and infrastructure management.",
+    "version": "1.0.0"
+  },
+  "owner": {
+    "name": "Daniel Bodnar",
+    "email": "daniel.bodnar@gmail.com",
+    "url": "https://github.com/danielbodnar"
+  },
+  "plugins": [
+    {
+      "name": "code-quality",
+      "description": "OxLint, Biome, and Prettier configuration, linting skills, and pre-commit hooks for consistent code quality.",
+      "source": "./plugins/code-quality",
+      "category": "code-quality"
+    },
+    {
+      "name": "project-scaffold",
+      "description": "Mise, justfile, devcontainer, and project template skills for bootstrapping new projects.",
+      "source": "./plugins/project-scaffold",
+      "category": "project-setup"
+    },
+    {
+      "name": "infra-ops",
+      "description": "SRE commands for incident response, capacity planning, system health checks, and infrastructure analysis.",
+      "source": "./plugins/infra-ops",
+      "category": "devops"
+    },
+    {
+      "name": "superpowers",
+      "description": "Advanced development workflows including TDD, debugging, code review, and parallel agent orchestration.",
+      "source": "./external_plugins/superpowers",
+      "category": "workflow"
+    },
+    {
+      "name": "qodo-skills",
+      "description": "AI-powered code quality skills from Qodo for testing, review, and analysis.",
+      "source": "./external_plugins/qodo-skills",
+      "category": "code-quality"
+    },
+    {
+      "name": "huggingface-skills",
+      "description": "Hugging Face integration skills for ML model management and inference.",
+      "source": "./external_plugins/huggingface-skills",
+      "category": "ai-ml"
+    },
+    {
+      "name": "sentry-skills",
+      "description": "Sentry integration for error tracking, performance monitoring, and issue management.",
+      "source": "./external_plugins/sentry-skills",
+      "category": "monitoring"
+    },
+    {
+      "name": "posthog",
+      "description": "PostHog integration for product analytics, feature flags, and session replay.",
+      "source": "./external_plugins/posthog",
+      "category": "analytics"
+    },
+    {
+      "name": "coderabbit",
+      "description": "CodeRabbit AI-powered code review and analysis plugin.",
+      "source": "./external_plugins/coderabbit",
+      "category": "code-quality"
+    },
+    {
+      "name": "firecrawl",
+      "description": "Firecrawl web scraping and crawling integration for data extraction.",
+      "source": "./external_plugins/firecrawl",
+      "category": "data"
+    },
+    {
+      "name": "sonatype-guide",
+      "description": "Sonatype dependency security scanning and vulnerability management.",
+      "source": "./external_plugins/sonatype-guide",
+      "category": "security"
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+# VyOS VRRP (High Availability) Configuration
+
+# Master Router Configuration
+configure
+
+# Interface configuration for Master
+set interfaces ethernet eth0 address '192.168.1.10/24'
+set interfaces ethernet eth0 description 'LAN Interface - Master'
+set interfaces ethernet eth1 address '203.0.113.10/30'
+set interfaces ethernet eth1 description 'WAN Interface - Master'
+
+# VRRP configuration for LAN interface (Master)
+set high-availability vrrp group LAN-VRRP interface 'eth0'
+set high-availability vrrp group LAN-VRRP priority '200'
+set high-availability vrrp group LAN-VRRP virtual-address '192.168.1.1/24'
+set high-availability vrrp group LAN-VRRP vrid '10'
+set high-availability vrrp group LAN-VRRP hello-source-address '192.168.1.10'
+set high-availability vrrp group LAN-VRRP authentication type 'plaintext-password'
+set high-availability vrrp group LAN-VRRP authentication password 'vrrp123'
+
+# VRRP configuration for WAN interface (Master)
+set high-availability vrrp group WAN-VRRP interface 'eth1'
+set high-availability vrrp group WAN-VRRP priority '200'
+set high-availability vrrp group WAN-VRRP virtual-address '203.0.113.9/30'
+set high-availability vrrp group WAN-VRRP vrid '20'
+set high-availability vrrp group WAN-VRRP hello-source-address '203.0.113.10'
+set high-availability vrrp group WAN-VRRP authentication type 'plaintext-password'
+set high-availability vrrp group WAN-VRRP authentication password 'vrrp123'
+
+# VRRP sync group (both interfaces fail together)
+set high-availability vrrp sync-group FAILOVER-GROUP member 'LAN-VRRP'
+set high-availability vrrp sync-group FAILOVER-GROUP member 'WAN-VRRP'
+
+# Transition scripts
+set high-availability vrrp group LAN-VRRP transition-script master '/config/scripts/vrrp-master.sh'
+set high-availability vrrp group LAN-VRRP transition-script backup '/config/scripts/vrrp-backup.sh'
+set high-availability vrrp group LAN-VRRP transition-script fault '/config/scripts/vrrp-fault.sh'
+
+# Health check script
+set high-availability vrrp group LAN-VRRP health-check script '/config/scripts/health-check.sh'
+set high-availability vrrp group LAN-VRRP health-check interval '10'
+set high-availability vrrp group LAN-VRRP health-check failure-count '3'
+
+# Configuration sync between routers
+set service config-sync secondary '192.168.1.20'
+set service config-sync section 'firewall'
+set service config-sync section 'nat'
+set service config-sync section 'vpn'
+
+commit
+save
+exit
+
+# ================================================================
+# Backup Router Configuration (on second router)
+# ================================================================
+
+configure
+
+# Interface configuration for Backup
+set interfaces ethernet eth0 address '192.168.1.20/24'
+set interfaces ethernet eth0 description 'LAN Interface - Backup'
+set interfaces ethernet eth1 address '203.0.113.11/30'
+set interfaces ethernet eth1 description 'WAN Interface - Backup'
+
+# VRRP configuration for LAN interface (Backup)
+set high-availability vrrp group LAN-VRRP interface 'eth0'
+set high-availability vrrp group LAN-VRRP priority '100'
+set high-availability vrrp group LAN-VRRP virtual-address '192.168.1.1/24'
+set high-availability vrrp group LAN-VRRP vrid '10'
+set high-availability vrrp group LAN-VRRP hello-source-address '192.168.1.20'
+set high-availability vrrp group LAN-VRRP authentication type 'plaintext-password'
+set high-availability vrrp group LAN-VRRP authentication password 'vrrp123'
+
+# VRRP configuration for WAN interface (Backup)
+set high-availability vrrp group WAN-VRRP interface 'eth1'
+set high-availability vrrp group WAN-VRRP priority '100'
+set high-availability vrrp group WAN-VRRP virtual-address '203.0.113.9/30'
+set high-availability vrrp group WAN-VRRP vrid '20'
+set high-availability vrrp group WAN-VRRP hello-source-address '203.0.113.11'
+set high-availability vrrp group WAN-VRRP authentication type 'plaintext-password'
+set high-availability vrrp group WAN-VRRP authentication password 'vrrp123'
+
+# VRRP sync group (both interfaces fail together)
+set high-availability vrrp sync-group FAILOVER-GROUP member 'LAN-VRRP'
+set high-availability vrrp sync-group FAILOVER-GROUP member 'WAN-VRRP'
+
+# Same transition scripts as master
+set high-availability vrrp group LAN-VRRP transition-script master '/config/scripts/vrrp-master.sh'
+set high-availability vrrp group LAN-VRRP transition-script backup '/config/scripts/vrrp-backup.sh'
+set high-availability vrrp group LAN-VRRP transition-script fault '/config/scripts/vrrp-fault.sh'
+
+# Health check script
+set high-availability vrrp group LAN-VRRP health-check script '/config/scripts/health-check.sh'
+set high-availability vrrp group LAN-VRRP health-check interval '10'
+set high-availability vrrp group LAN-VRRP health-check failure-count '3'
+
+commit
+save
+exit
+
+# ================================================================
+# Example transition scripts (place in /config/scripts/)
+# ================================================================
+
+# /config/scripts/vrrp-master.sh
+#!/bin/bash
+logger "VRRP: Becoming MASTER"
+# Add any custom actions when becoming master
+
+# /config/scripts/vrrp-backup.sh
+#!/bin/bash
+logger "VRRP: Becoming BACKUP"
+# Add any custom actions when becoming backup
+
+# /config/scripts/vrrp-fault.sh
+#!/bin/bash
+logger "VRRP: Entering FAULT state"
+# Add any custom actions when entering fault state
+
+# /config/scripts/health-check.sh
+#!/bin/bash
+# Custom health check script
+# Exit 0 for healthy, non-zero for unhealthy
+ping -c 1 8.8.8.8 > /dev/null 2>&1
+exit $?

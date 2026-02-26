@@ -1,0 +1,15 @@
+# Bun project mise configuration
+# Usage: Copy to project root as .mise.toml
+#
+# Bun as primary runtime. Node included only for ecosystem
+# compatibility (native addons, tooling that shells out to node).
+
+[tools]
+bun = "latest"
+node = "22"
+
+[settings]
+experimental = true
+
+[env]
+BUN_RUNTIME = "bun"

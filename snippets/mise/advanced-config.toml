@@ -1,0 +1,104 @@
+# Advanced mise.toml Configuration
+# Comprehensive example with all features
+
+min_version = "2024.9.5"
+
+[tools]
+# Specific versions
+node = "22.12.0"
+python = { version = "3.11", virtualenv = ".venv" }
+ruby = "3.3.0"
+
+# Tool options
+"npm:typescript" = "latest"
+"cargo:ripgrep" = "14"
+"go:github.com/golangci/golangci-lint/cmd/golangci-lint" = "latest"
+
+# Backend-specific tools
+"aqua:BurntSushi/ripgrep" = "latest"
+"pipx:black" = { version = "latest", extras = "d" }
+
+[env]
+# Basic variables
+NODE_ENV = "{{ env.NODE_ENV | default(value='development') }}"
+API_URL = "https://api.example.com"
+
+# Path modifications
+_.path = ["{{ config_root }}/bin", "{{ config_root }}/node_modules/.bin"]
+_.python.venv = { path = ".venv", create = true }
+
+# Template variables
+DATABASE_URL = "postgresql://localhost/{{ config_root | basename }}_{{ env.NODE_ENV | default(value='development') }}"
+LOG_FILE = "{{ config_root }}/logs/app.log"
+
+# Lazy evaluation
+JAVA_HOME = { value = "{{ env.PATH }}", tools = true }
+
+[vars]
+# Shared variables (not environment variables)
+build_args = "--production"
+test_pattern = "**/*.test.{js,ts}"
+docker_image = "myapp:{{ env.VERSION | default(value='latest') }}"
+
+[task_config]
+# Global task configuration
+dir = "{{ config_root }}"
+env = { FORCE_COLOR = "1" }
+
+[tasks.setup]
+description = "Initial project setup"
+run = [
+  "mise install",
+  "npm install",
+  "mkdir -p logs tmp",
+]
+
+[tasks.lint]
+description = "Run linting"
+run = [
+  "eslint src/",
+  "prettier --check src/",
+  "tsc --noEmit",
+]
+sources = ["src/**/*.{js,ts,tsx}", "*.{js,ts}"]
+
+[tasks.test]
+description = "Run tests"
+alias = "t"
+env = { NODE_ENV = "test" }
+run = "jest {{ vars.test_pattern }}"
+depends = ["lint"]
+
+[tasks.build]
+description = "Build for production"
+alias = "b"
+env = { NODE_ENV = "production" }
+run = "npm run build {{ vars.build_args }}"
+sources = ["src/**/*", "package.json", "vite.config.ts"]
+outputs = ["dist/**/*"]
+
+[tasks.docker]
+description = "Build Docker image"
+run = "docker build -t {{ vars.docker_image }} ."
+depends = ["build"]
+
+[tasks.deploy]
+description = "Deploy to production"
+confirm = "Are you sure you want to deploy?"
+run = [
+  "mise run build",
+  "mise run docker",
+  "docker push {{ vars.docker_image }}",
+]
+depends = ["test"]
+
+# Hooks
+[hooks]
+enter = "echo 'Entering {{ config_root | basename }}'"
+leave = "echo 'Leaving project'"
+postinstall = "npm run build"
+
+# Watch files
+[[watch_files]]
+patterns = ["src/**/*.{js,ts,tsx}"]
+run = "npm run build"

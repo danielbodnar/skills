@@ -1,0 +1,76 @@
+[submodule "external_plugins/superpowers"]
+	path = external_plugins/superpowers
+	url = https://github.com/obra/superpowers.git
+[submodule "external_plugins/qodo-skills"]
+	path = external_plugins/qodo-skills
+	url = https://github.com/qodo-ai/qodo-skills.git
+[submodule "external_plugins/huggingface-skills"]
+	path = external_plugins/huggingface-skills
+	url = https://github.com/huggingface/skills.git
+[submodule "external_plugins/sentry-skills"]
+	path = external_plugins/sentry-skills
+	url = https://github.com/getsentry/sentry-for-claude.git
+[submodule "external_plugins/posthog"]
+	path = external_plugins/posthog
+	url = https://github.com/PostHog/posthog-for-claude.git
+[submodule "external_plugins/coderabbit"]
+	path = external_plugins/coderabbit
+	url = https://github.com/coderabbitai/claude-plugin.git
+[submodule "external_plugins/firecrawl"]
+	path = external_plugins/firecrawl
+	url = https://github.com/firecrawl/firecrawl-claude-plugin.git
+[submodule "external_plugins/sonatype-guide"]
+	path = external_plugins/sonatype-guide
+	url = https://github.com/sonatype/sonatype-guide-claude-plugin.git
+[submodule "vendors/mcp-servers/awesome-mcp-servers"]
+	path = vendors/mcp-servers/awesome-mcp-servers
+	url = https://github.com/punkpeye/awesome-mcp-servers.git
+	shallow = true
+[submodule "vendors/mcp-servers/mcp-servers"]
+	path = vendors/mcp-servers/mcp-servers
+	url = https://github.com/modelcontextprotocol/servers.git
+	shallow = true
+[submodule "vendors/mcp-servers/cloudflare-mcp-servers"]
+	path = vendors/mcp-servers/cloudflare-mcp-servers
+	url = https://github.com/cloudflare/mcp-server-cloudflare.git
+	shallow = true
+[submodule "vendors/editor-configs/kickstart-nvim"]
+	path = vendors/editor-configs/kickstart-nvim
+	url = https://github.com/nvim-lua/kickstart.nvim.git
+	shallow = true
+[submodule "vendors/editor-configs/lazyvim"]
+	path = vendors/editor-configs/lazyvim
+	url = https://github.com/LazyVim/LazyVim.git
+	shallow = true
+[submodule "vendors/editor-configs/zed-extensions"]
+	path = vendors/editor-configs/zed-extensions
+	url = https://github.com/zed-industries/extensions.git
+	shallow = true
+[submodule "vendors/devcontainers/features"]
+	path = vendors/devcontainers/features
+	url = https://github.com/devcontainers/features.git
+	shallow = true
+[submodule "vendors/devcontainers/templates"]
+	path = vendors/devcontainers/templates
+	url = https://github.com/devcontainers/templates.git
+	shallow = true
+[submodule "vendors/linters-formatters/oxc"]
+	path = vendors/linters-formatters/oxc
+	url = https://github.com/oxc-project/oxc.git
+	shallow = true
+[submodule "vendors/linters-formatters/biome"]
+	path = vendors/linters-formatters/biome
+	url = https://github.com/biomejs/biome.git
+	shallow = true
+[submodule "vendors/mise/mise"]
+	path = vendors/mise/mise
+	url = https://github.com/jdx/mise.git
+	shallow = true
+[submodule "vendors/just/just"]
+	path = vendors/just/just
+	url = https://github.com/casey/just.git
+	shallow = true
+[submodule "vendors/claude-ecosystem/claude-plugins-official"]
+	path = vendors/claude-ecosystem/claude-plugins-official
+	url = https://github.com/anthropics/claude-plugins-official.git
+	shallow = true

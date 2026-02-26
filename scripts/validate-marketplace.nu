@@ -1,0 +1,48 @@
+#!/usr/bin/env nu
+# Validates marketplace.json — checks plugin source paths and manifests
+# Exit code 1 if any errors found
+
+def main [] {
+  let root = ($env.FILE_PWD | path dirname)
+  let marketplace_path = ($root | path join ".claude-plugin" "marketplace.json")
+
+  print "\nValidating marketplace...\n"
+
+  if not ($marketplace_path | path exists) {
+    print "  [err]  marketplace.json not found"
+    exit 1
+  }
+
+  let marketplace = (open $marketplace_path)
+  let plugin_count = ($marketplace.plugins | length)
+
+  print $"  [ok]   marketplace.json \(($plugin_count) plugins\)"
+
+  let results = ($marketplace.plugins | each { |plugin|
+    let source_path = ($root | path join $plugin.source)
+    let manifest_path = ($source_path | path join ".claude-plugin" "plugin.json")
+
+    if not ($source_path | path exists) {
+      print $"  [err]  ($plugin.name): source not found \(($plugin.source)\)"
+      { name: $plugin.name, status: "error" }
+    } else if not ($manifest_path | path exists) {
+      print $"  [warn] ($plugin.name): no plugin.json manifest"
+      { name: $plugin.name, status: "warning" }
+    } else {
+      { name: $plugin.name, status: "ok" }
+    }
+  })
+
+  # marketplace.json itself counts as 1 ok
+  let ok_count = 1 + ($results | where status == "ok" | length)
+  let warn_count = ($results | where status == "warning" | length)
+  let err_count = ($results | where status == "error" | length)
+
+  print ""
+  print $"Results: ($ok_count) ok, ($warn_count) warning\(s\), ($err_count) error\(s\)"
+  print ""
+
+  if $err_count > 0 {
+    exit 1
+  }
+}

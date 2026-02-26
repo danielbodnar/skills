@@ -1,0 +1,67 @@
+# systemd Service Unit File for systemd-vmspawn
+# Location: /etc/systemd/system/vmspawn-example.service
+# Usage: systemctl start vmspawn-example.service
+
+[Unit]
+Description=Example Virtual Machine
+Documentation=man:systemd-vmspawn(1)
+# Wait for network to be available for networking features
+After=network.target systemd-networkd.service
+# Ensure the machine image exists
+ConditionPathExists=/var/lib/machines/example.raw
+# Stop if the main systemd process fails
+BindsTo=systemd-vmspawn@example.service
+
+[Service]
+Type=notify
+# Main command to start the VM
+ExecStart=/usr/bin/systemd-vmspawn \
+    --image=/var/lib/machines/example.raw \
+    --machine=example-vm \
+    --register=yes \
+    --network-user-mode \
+    --vsock=yes,200 \
+    --pass-ssh-key=yes \
+    --cpus=2 \
+    --ram=4G \
+    --secure-boot=yes \
+    --tpm=yes
+
+# VM lifecycle management
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/usr/bin/machinectl terminate example-vm
+KillMode=mixed
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+# Restart policy
+Restart=on-failure
+RestartSec=30
+
+# Resource limits (systemd controls, not VM limits)
+# Limit the service itself, not the VM
+MemoryHigh=8G
+MemoryMax=10G
+CPUQuota=400%
+
+# Security settings for the systemd-vmspawn process
+# These don't affect the VM, only the spawning process
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/machines /run/systemd/machined /run/user
+
+# Environment variables
+Environment=SYSTEMD_LOG_LEVEL=info
+# Example of custom QEMU options
+#Environment=SYSTEMD_VMSPAWN_QEMU_EXTRA=-device virtio-gpu-pci
+
+# Logging configuration
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vmspawn-example
+
+[Install]
+WantedBy=multi-user.target
+# Create alias for easier management
+Alias=example-vm.service

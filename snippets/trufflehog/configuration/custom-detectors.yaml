@@ -1,0 +1,230 @@
+# TruffleHog Custom Detectors Configuration
+# This file demonstrates various custom detector configurations
+
+# Basic custom detector
+detectors:
+  # Simple API key detector
+  - name: MyAPIKeyDetector
+    keywords:
+      - myapi
+      - apikey
+      - api_key
+    regex:
+      token: 'myapi_[A-Za-z0-9]{32}'
+    verify:
+      - endpoint: https://api.example.com/validate
+        unsafe: false
+        headers:
+          - "Authorization: Bearer validation-token"
+          - "Content-Type: application/json"
+    entropy: 3.0
+    exclude_words:
+      - example
+      - test
+      - dummy
+      - placeholder
+
+  # Complex detector with multiple regex patterns
+  - name: DatabaseCredentialsDetector
+    keywords:
+      - database
+      - db_password
+      - mysql
+      - postgres
+    regex:
+      username: 'db_user["\']?\s*[:=]\s*["\']?([A-Za-z0-9_]{3,32})["\']?'
+      password: 'db_pass["\']?\s*[:=]\s*["\']?([A-Za-z0-9!@#$%^&*()]{8,64})["\']?'
+      host: 'db_host["\']?\s*[:=]\s*["\']?([A-Za-z0-9.-]{5,255})["\']?'
+    primary_regex_name: password
+    verify:
+      - endpoint: https://db-validator.internal.com/verify
+        unsafe: true
+        headers:
+          - "X-API-Key: internal-validation-key"
+    entropy: 4.0
+    exclude_regexes_capture:
+      - 'test.*'
+      - 'example.*'
+      - 'localhost'
+    exclude_regexes_match:
+      - '.*\.example\.com.*'
+      - '.*test.*'
+
+  # JWT Token detector
+  - name: JWTDetector
+    keywords:
+      - jwt
+      - token
+      - bearer
+    regex:
+      jwt: 'eyJ[A-Za-z0-9+/=]+'
+    verify:
+      - endpoint: https://jwt-validator.example.com/verify
+        headers:
+          - "Content-Type: application/json"
+    entropy: 5.0
+    exclude_words:
+      - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9  # Example JWT header
+
+  # Slack Token detector
+  - name: SlackTokenDetector
+    keywords:
+      - slack
+      - xoxb
+      - xoxp
+      - xoxa
+    regex:
+      bot_token: 'xoxb-[0-9]{11,13}-[0-9]{11,13}-[A-Za-z0-9]{24}'
+      user_token: 'xoxp-[0-9]{11,13}-[0-9]{11,13}-[0-9]{11,13}-[A-Za-z0-9]{32}'
+      app_token: 'xoxa-[0-9]{1,2}-[0-9]{11,13}-[0-9]{11,13}-[A-Za-z0-9]{32}'
+    verify:
+      - endpoint: https://slack.com/api/auth.test
+        headers:
+          - "Content-Type: application/x-www-form-urlencoded"
+    entropy: 3.5
+
+  # AWS-like credentials detector
+  - name: CustomAWSDetector
+    keywords:
+      - aws
+      - amazon
+      - access_key
+      - secret_key
+    regex:
+      access_key: 'AKIA[0-9A-Z]{16}'
+      secret_key: '[A-Za-z0-9+/]{40}'
+    verify:
+      - endpoint: https://sts.amazonaws.com/
+        headers:
+          - "Content-Type: application/x-amz-json-1.1"
+    entropy: 4.5
+    exclude_words:
+      - AKIAIOSFODNN7EXAMPLE
+      - wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+  # GitHub Token detector
+  - name: GitHubTokenDetector
+    keywords:
+      - github
+      - ghp_
+      - gho_
+      - ghu_
+      - ghs_
+      - ghr_
+    regex:
+      personal_token: 'ghp_[A-Za-z0-9]{36}'
+      oauth_token: 'gho_[A-Za-z0-9]{36}'
+      user_token: 'ghu_[A-Za-z0-9]{36}'
+      server_token: 'ghs_[A-Za-z0-9]{36}'
+      refresh_token: 'ghr_[A-Za-z0-9]{76}'
+    verify:
+      - endpoint: https://api.github.com/user
+        headers:
+          - "User-Agent: TruffleHog-Custom-Detector"
+    entropy: 3.8
+
+  # MongoDB Connection String detector
+  - name: MongoDBDetector
+    keywords:
+      - mongodb
+      - mongo
+      - connection
+    regex:
+      connection_string: 'mongodb(\+srv)?://[A-Za-z0-9:@.-]+/[A-Za-z0-9_-]+'
+    verify:
+      - endpoint: internal-mongo-validator
+        unsafe: true
+    exclude_regexes_match:
+      - '.*localhost.*'
+      - '.*127\.0\.0\.1.*'
+      - '.*example\.com.*'
+
+  # Generic password detector with high entropy requirement
+  - name: GenericPasswordDetector
+    keywords:
+      - password
+      - passwd
+      - pwd
+      - secret
+    regex:
+      password: '["\']([A-Za-z0-9!@#$%^&*()_+\-=\[\]{}|;:,.<>?]{12,})["\']'
+    entropy: 4.8
+    exclude_words:
+      - password
+      - secret
+      - example
+      - test
+      - admin
+      - root
+      - user
+    exclude_regexes_capture:
+      - '^[a-z]+$'  # Exclude simple lowercase words
+      - '^[0-9]+$'  # Exclude numeric-only strings
+
+  # API key with custom validation logic
+  - name: CustomServiceAPIKey
+    keywords:
+      - customservice
+      - cs_api
+    regex:
+      api_key: 'cs_[A-Za-z0-9]{24}_[A-Za-z0-9]{16}'
+    verify:
+      - endpoint: https://api.customservice.com/v1/validate
+        headers:
+          - "X-Custom-Header: validation-request"
+          - "Accept: application/json"
+    entropy: 3.5
+    exclude_regexes_match:
+      - '.*_test_.*'
+      - '.*_demo_.*'
+
+  # Multi-part secret detector
+  - name: MultiPartSecretDetector
+    keywords:
+      - client_id
+      - client_secret
+      - oauth
+    regex:
+      client_id: 'client_id["\']?\s*[:=]\s*["\']?([A-Za-z0-9_-]{20,40})["\']?'
+      client_secret: 'client_secret["\']?\s*[:=]\s*["\']?([A-Za-z0-9_-]{32,64})["\']?'
+    primary_regex_name: client_secret
+    verify:
+      - endpoint: https://oauth.provider.com/token
+        headers:
+          - "Content-Type: application/x-www-form-urlencoded"
+    entropy: 4.2
+
+  # File-based secret detector
+  - name: ConfigFileSecretDetector
+    keywords:
+      - config
+      - settings
+      - environment
+    regex:
+      env_var: '^[A-Z_]+\s*=\s*["\']?([A-Za-z0-9+/=]{16,})["\']?$'
+    entropy: 3.8
+    exclude_words:
+      - localhost
+      - example
+      - test
+      - development
+      - production
+    exclude_regexes_capture:
+      - '^true$'
+      - '^false$'
+      - '^[0-9]+$'
+      - '^(http|https)://.*'
+
+# Advanced configuration options
+advanced_settings:
+  # Global entropy threshold
+  global_entropy_threshold: 3.0
+  
+  # Verification timeout
+  verification_timeout: 30s
+  
+  # Maximum verification attempts
+  max_verification_attempts: 3
+  
+  # Custom verification retry logic
+  verification_retry_delay: 5s

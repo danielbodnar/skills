@@ -1,0 +1,10 @@
+{
+  "name": "infra-ops",
+  "version": "1.0.0",
+  "description": "SRE commands for incident response, capacity planning, system health checks, and infrastructure analysis.",
+  "author": {
+    "name": "Daniel Bodnar",
+    "email": "daniel.bodnar@gmail.com"
+  },
+  "keywords": ["sre", "infrastructure", "monitoring", "incident-response", "capacity-planning", "devops"]
+}

@@ -1,0 +1,463 @@
+---
+title: "Quarto API and CLI Examples"
+format: html
+execute:
+  eval: false
+---
+
+# Quarto Command Line Interface Examples
+
+## Basic Rendering Commands
+
+```bash
+# Render single document
+quarto render document.qmd
+
+# Render with specific format
+quarto render document.qmd --to pdf
+quarto render document.qmd --to html
+quarto render document.qmd --to docx
+
+# Render entire project
+quarto render
+
+# Render with execution
+quarto render document.qmd --execute
+quarto render document.qmd --execute-daemon
+quarto render document.qmd --execute-daemon 60
+
+# Render without execution
+quarto render document.qmd --no-execute
+
+# Render with cache options
+quarto render document.qmd --cache
+quarto render document.qmd --no-cache
+quarto render document.qmd --cache-refresh
+```
+
+## Preview Commands
+
+```bash
+# Preview document with live reload
+quarto preview document.qmd
+
+# Preview entire project
+quarto preview
+
+# Preview with specific format
+quarto preview document.qmd --to pdf
+
+# Preview with custom port
+quarto preview --port 4200
+
+# Preview without opening browser
+quarto preview --no-browser
+
+# Preview with host binding
+quarto preview --host 0.0.0.0
+```
+
+## Project Creation
+
+```bash
+# Create website project
+quarto create project website mysite
+
+# Create book project  
+quarto create project book mybook
+
+# Create presentation
+quarto create project revealjs mypresentation
+
+# Create blog
+quarto create project blog myblog
+
+# Create default project in current directory
+quarto create project default .
+```
+
+## Document Conversion
+
+```bash
+# Convert Jupyter notebook to Quarto
+quarto convert notebook.ipynb
+
+# Convert with specific output
+quarto convert notebook.ipynb --output document.qmd
+
+# Convert R Markdown to Quarto
+quarto convert document.Rmd
+```
+
+## Publishing Commands
+
+```bash
+# Publish to GitHub Pages
+quarto publish gh-pages
+
+# Publish to Netlify
+quarto publish netlify
+
+# Publish to Posit Connect
+quarto publish connect
+
+# Publish with specific target
+quarto publish netlify --id site-id-here
+
+# Publish without rendering
+quarto publish netlify --no-render
+
+# Publish specific document
+quarto publish netlify document.qmd
+```
+
+## System Diagnostics
+
+```bash
+# Check Quarto installation
+quarto check
+
+# Check specific engine
+quarto check jupyter
+quarto check knitr
+quarto check julia
+
+# Get version information
+quarto --version
+
+# Get help
+quarto --help
+quarto render --help
+quarto publish --help
+```
+
+## Advanced Rendering Options
+
+```bash
+# Render with parameters
+quarto render report.qmd -P region:north -P year:2024
+
+# Render with environment variables
+QUARTO_PYTHON=/path/to/python quarto render document.qmd
+
+# Render with specific profile
+quarto render --profile production
+
+# Render with metadata override
+quarto render document.qmd -M title:"New Title"
+
+# Render to specific output directory
+quarto render --output-dir dist
+
+# Render with quiet mode
+quarto render --quiet
+
+# Render with debug information
+quarto render --debug
+```
+
+# Quarto Python API Examples
+
+## Basic Python API Usage
+
+```python
+import subprocess
+import os
+from pathlib import Path
+
+# Render document using Python subprocess
+def render_quarto_doc(input_file, output_format="html"):
+    """Render a Quarto document using subprocess."""
+    cmd = ["quarto", "render", str(input_file)]
+    if output_format:
+        cmd.extend(["--to", output_format])
+    
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode == 0:
+        print(f"Successfully rendered {input_file}")
+    else:
+        print(f"Error rendering {input_file}: {result.stderr}")
+    return result
+
+# Preview document
+def preview_quarto_doc(input_file, port=None):
+    """Preview a Quarto document."""
+    cmd = ["quarto", "preview", str(input_file)]
+    if port:
+        cmd.extend(["--port", str(port)])
+    
+    subprocess.Popen(cmd)
+
+# Create project
+def create_quarto_project(project_type, name):
+    """Create a new Quarto project."""
+    cmd = ["quarto", "create", "project", project_type, name]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.returncode == 0
+
+# Usage examples
+render_quarto_doc("document.qmd", "pdf")
+preview_quarto_doc("document.qmd", port=4200)
+create_quarto_project("website", "mysite")
+```
+
+## Programmatic Document Generation
+
+```python
+from pathlib import Path
+import yaml
+import json
+
+def create_quarto_document(title, content, output_file, format_options=None):
+    """Create a Quarto document programmatically."""
+    
+    # Default format options
+    if format_options is None:
+        format_options = {
+            "html": {
+                "theme": "cosmo",
+                "toc": True
+            }
+        }
+    
+    # Create YAML front matter
+    front_matter = {
+        "title": title,
+        "format": format_options
+    }
+    
+    # Generate document content
+    yaml_header = "---\n" + yaml.dump(front_matter, default_flow_style=False) + "---\n\n"
+    full_content = yaml_header + content
+    
+    # Write to file
+    Path(output_file).write_text(full_content)
+    print(f"Created {output_file}")
+
+# Example usage
+content = """
+# Introduction
+
+This is programmatically generated content.
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+plt.plot(x, y)
+plt.title("Generated Plot")
+plt.show()
+```
+"""
+
+create_quarto_document(
+    title="Generated Report",
+    content=content,
+    output_file="generated_report.qmd",
+    format_options={
+        "html": {"theme": "cosmo", "toc": True},
+        "pdf": {"documentclass": "article"}
+    }
+)
+```
+
+## Batch Processing
+
+```python
+import glob
+from concurrent.futures import ThreadPoolExecutor
+import subprocess
+
+def render_document(qmd_file):
+    """Render a single Quarto document."""
+    cmd = ["quarto", "render", qmd_file]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return qmd_file, result.returncode == 0
+
+def batch_render_documents(pattern="*.qmd", max_workers=4):
+    """Render multiple Quarto documents in parallel."""
+    qmd_files = glob.glob(pattern)
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(executor.map(render_document, qmd_files))
+    
+    # Report results
+    for file, success in results:
+        status = "✓" if success else "✗"
+        print(f"{status} {file}")
+
+# Render all QMD files in current directory
+batch_render_documents("*.qmd")
+
+# Render specific pattern
+batch_render_documents("reports/*.qmd")
+```
+
+## Configuration Management
+
+```python
+import yaml
+from pathlib import Path
+
+class QuartoConfig:
+    """Manage Quarto project configuration."""
+    
+    def __init__(self, config_file="_quarto.yml"):
+        self.config_file = Path(config_file)
+        self.config = self.load_config()
+    
+    def load_config(self):
+        """Load configuration from file."""
+        if self.config_file.exists():
+            with open(self.config_file, 'r') as f:
+                return yaml.safe_load(f)
+        return {}
+    
+    def save_config(self):
+        """Save configuration to file."""
+        with open(self.config_file, 'w') as f:
+            yaml.dump(self.config, f, default_flow_style=False)
+    
+    def set_website_title(self, title):
+        """Set website title."""
+        if 'website' not in self.config:
+            self.config['website'] = {}
+        self.config['website']['title'] = title
+    
+    def add_navbar_item(self, text, href):
+        """Add item to navbar."""
+        if 'website' not in self.config:
+            self.config['website'] = {}
+        if 'navbar' not in self.config['website']:
+            self.config['website']['navbar'] = {}
+        if 'left' not in self.config['website']['navbar']:
+            self.config['website']['navbar']['left'] = []
+        
+        self.config['website']['navbar']['left'].append({
+            'text': text,
+            'href': href
+        })
+    
+    def set_theme(self, theme):
+        """Set HTML theme."""
+        if 'format' not in self.config:
+            self.config['format'] = {}
+        if 'html' not in self.config['format']:
+            self.config['format']['html'] = {}
+        self.config['format']['html']['theme'] = theme
+
+# Usage example
+config = QuartoConfig()
+config.set_website_title("My Data Science Blog")
+config.add_navbar_item("Home", "index.qmd")
+config.add_navbar_item("About", "about.qmd")
+config.set_theme("cosmo")
+config.save_config()
+```
+
+## Integration with Data Processing
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from datetime import datetime
+
+def generate_data_report(data_file, output_file):
+    """Generate a Quarto report from data file."""
+    
+    # Load and analyze data
+    df = pd.read_csv(data_file)
+    
+    # Generate summary statistics
+    summary = df.describe()
+    
+    # Create report content
+    report_content = f"""
+# Data Analysis Report
+
+Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## Data Summary
+
+```{{python}}
+#| echo: false
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load data
+df = pd.read_csv('{data_file}')
+
+# Display basic info
+print(f"Dataset shape: {{df.shape}}")
+print(f"\\nColumns: {{list(df.columns)}}")
+print(f"\\nMissing values:")
+print(df.isnull().sum())
+```
+
+## Summary Statistics
+
+```{{python}}
+#| echo: false
+print(df.describe())
+```
+
+## Visualizations
+
+```{{python}}
+#| echo: false
+#| fig-cap: "Data Distribution"
+
+# Create visualizations
+fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+fig.suptitle('Data Analysis')
+
+# Plot numeric columns
+numeric_cols = df.select_dtypes(include=[np.number]).columns[:4]
+for i, col in enumerate(numeric_cols):
+    ax = axes[i//2, i%2]
+    df[col].hist(ax=ax, bins=20)
+    ax.set_title(f'Distribution of {{col}}')
+
+plt.tight_layout()
+plt.show()
+```
+
+## Conclusions
+
+The analysis reveals important patterns in the data that warrant further investigation.
+"""
+
+    # Create YAML front matter
+    front_matter = """---
+title: "Automated Data Analysis Report"
+author: "Data Pipeline"
+date: today
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: true
+  pdf:
+    documentclass: article
+execute:
+  echo: false
+  warning: false
+---
+
+"""
+    
+    # Write complete document
+    with open(output_file, 'w') as f:
+        f.write(front_matter + report_content)
+    
+    print(f"Generated report: {output_file}")
+
+# Usage
+generate_data_report("sales_data.csv", "sales_report.qmd")
+
+# Render the report
+subprocess.run(["quarto", "render", "sales_report.qmd"])
+```

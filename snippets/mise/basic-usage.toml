@@ -1,0 +1,47 @@
+# Basic mise.toml Configuration
+# This is the most common configuration file for mise
+
+min_version = "2024.9.5"
+
+[tools]
+# Language runtimes
+node = "22"
+python = "3.11"
+ruby = "3.3"
+go = "1.21"
+
+# Development tools
+terraform = "latest"
+kubectl = "latest"
+jq = "latest"
+
+# Package managers
+npm = "latest"
+yarn = "latest"
+pnpm = "latest"
+
+[env]
+# Basic environment variables
+NODE_ENV = "development"
+DEBUG = "true"
+LOG_LEVEL = "info"
+
+# Template usage
+PROJECT_NAME = "{{ config_root | basename }}"
+PROJECT_ROOT = "{{ config_root }}"
+
+[tasks.install]
+description = "Install dependencies"
+run = "npm install"
+
+[tasks.dev]
+description = "Start development server"
+run = "npm run dev"
+
+[tasks.test]
+description = "Run tests"
+run = "npm test"
+
+[tasks.build]
+description = "Build for production"
+run = "npm run build"

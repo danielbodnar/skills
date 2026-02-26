@@ -1,0 +1,165 @@
+# Reusable Workflow Template
+# Can be called from other workflows across repositories
+
+name: Reusable CI
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '20'
+      
+      package_manager:
+        description: 'Package manager to use'
+        required: false
+        type: string
+        default: 'npm'
+
+      run_tests:
+        description: 'Whether to run tests'
+        required: false
+        type: boolean
+        default: true
+
+      environment:
+        description: 'Deployment environment'
+        required: false
+        type: string
+        default: 'staging'
+
+    secrets:
+      NPM_TOKEN:
+        description: 'NPM registry token'
+        required: false
+      
+      DEPLOY_KEY:
+        description: 'Deployment key'
+        required: false
+
+    outputs:
+      build_version:
+        description: 'Version of the built package'
+        value: ${{ jobs.build.outputs.version }}
+      
+      artifact_url:
+        description: 'URL of the uploaded artifact'
+        value: ${{ jobs.build.outputs.artifact_url }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      artifact_url: ${{ steps.upload.outputs.artifact-url }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node_version }}
+        registry-url: 'https://registry.npmjs.org'
+
+    - name: Setup Bun (if using bun)
+      if: inputs.package_manager == 'bun'
+      uses: oven-sh/setup-bun@v1
+
+    - name: Get package version
+      id: version
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Install dependencies (npm)
+      if: inputs.package_manager == 'npm'
+      run: npm ci
+
+    - name: Install dependencies (yarn)
+      if: inputs.package_manager == 'yarn'
+      run: yarn install --frozen-lockfile
+
+    - name: Install dependencies (bun)
+      if: inputs.package_manager == 'bun'
+      run: bun install
+
+    - name: Run linting
+      run: |
+        if [ "${{ inputs.package_manager }}" = "bun" ]; then
+          bun run lint
+        else
+          npm run lint
+        fi
+
+    - name: Run tests
+      if: inputs.run_tests
+      run: |
+        if [ "${{ inputs.package_manager }}" = "bun" ]; then
+          bun test
+        else
+          npm test
+        fi
+
+    - name: Build project
+      run: |
+        if [ "${{ inputs.package_manager }}" = "bun" ]; then
+          bun run build
+        else
+          npm run build
+        fi
+
+    - name: Upload build artifacts
+      id: upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-${{ steps.version.outputs.version }}
+        path: dist/
+        retention-days: 7
+
+  security-scan:
+    runs-on: ubuntu-latest
+    if: inputs.run_tests
+    
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Run security audit
+      run: |
+        if [ "${{ inputs.package_manager }}" = "npm" ]; then
+          npm audit --audit-level=high
+        elif [ "${{ inputs.package_manager }}" = "yarn" ]; then
+          yarn audit --level high
+        elif [ "${{ inputs.package_manager }}" = "bun" ]; then
+          bun audit
+        fi
+
+  deploy:
+    needs: [build, security-scan]
+    runs-on: ubuntu-latest
+    if: success() && inputs.environment != ''
+    
+    environment: ${{ inputs.environment }}
+
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-${{ needs.build.outputs.version }}
+        path: dist/
+
+    - name: Deploy to environment
+      env:
+        DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+      run: |
+        echo "Deploying version ${{ needs.build.outputs.version }} to ${{ inputs.environment }}"
+        # Add actual deployment commands here

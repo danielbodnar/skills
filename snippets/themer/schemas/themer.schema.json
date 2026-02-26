@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://themer.dev/schemas/color-set.json",
+  "title": "Themer Color Set Schema",
+  "description": "JSON Schema for Themer color set configuration files",
+  "type": "object",
+  "required": ["name", "colors"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the color set",
+      "pattern": "^[a-z0-9-_]+$",
+      "minLength": 1,
+      "maxLength": 50,
+      "examples": ["my-theme", "dark-ocean", "light-forest"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of the color set",
+      "maxLength": 200
+    },
+    "author": {
+      "type": "string",
+      "description": "Author of the color set",
+      "maxLength": 100
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the color set",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "colors": {
+      "type": "object",
+      "description": "Color variants (dark, light, etc.)",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9_-]*$": {
+          "$ref": "#/definitions/colorVariant"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for the color set",
+      "properties": {
+        "inspiration": {
+          "type": "string",
+          "description": "Source of inspiration for the color set"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "description": "Tags to categorize the color set"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["dark", "light", "high-contrast", "colorful", "minimal", "retro", "modern"],
+          "description": "Category of the color set"
+        },
+        "accessibility": {
+          "type": "object",
+          "properties": {
+            "contrastRatio": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 21
+            },
+            "wcagLevel": {
+              "type": "string",
+              "enum": ["AA", "AAA"]
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "colorVariant": {
+      "type": "object",
+      "description": "A color variant containing shades and accents",
+      "required": [
+        "shade0", "shade1", "shade2", "shade3", "shade4", "shade5", "shade6", "shade7",
+        "accent0", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "accent7"
+      ],
+      "properties": {
+        "shade0": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Primary background color"
+        },
+        "shade1": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Secondary background color"
+        },
+        "shade2": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Selection background color"
+        },
+        "shade3": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Line highlight color"
+        },
+        "shade4": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Comment color"
+        },
+        "shade5": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Secondary text color"
+        },
+        "shade6": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Primary text color"
+        },
+        "shade7": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Bright text color"
+        },
+        "accent0": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Red accent - errors, deletions"
+        },
+        "accent1": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Orange accent - constants, numbers"
+        },
+        "accent2": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Yellow accent - strings"
+        },
+        "accent3": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Green accent - additions, success"
+        },
+        "accent4": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Cyan accent - info, links"
+        },
+        "accent5": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Blue/Purple accent - keywords"
+        },
+        "accent6": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Pink accent - storage, functions"
+        },
+        "accent7": {
+          "$ref": "#/definitions/hexColor",
+          "description": "Additional accent color"
+        }
+      },
+      "additionalProperties": false
+    },
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "description": "Hexadecimal color code (6 digits)",
+      "examples": ["#000000", "#ffffff", "#ff5555", "#50fa7b"]
+    }
+  },
+  "examples": [
+    {
+      "name": "dark-theme",
+      "description": "A dark theme with vibrant accents",
+      "author": "John Doe",
+      "version": "1.0.0",
+      "colors": {
+        "dark": {
+          "shade0": "#1a1a1a",
+          "shade1": "#2a2a2a",
+          "shade2": "#3a3a3a",
+          "shade3": "#4a4a4a",
+          "shade4": "#5a5a5a",
+          "shade5": "#6a6a6a",
+          "shade6": "#8a8a8a",
+          "shade7": "#ffffff",
+          "accent0": "#ff5555",
+          "accent1": "#ffb86c",
+          "accent2": "#f1fa8c",
+          "accent3": "#50fa7b",
+          "accent4": "#8be9fd",
+          "accent5": "#bd93f9",
+          "accent6": "#ff79c6",
+          "accent7": "#f8f8f2"
+        },
+        "light": {
+          "shade0": "#ffffff",
+          "shade1": "#f5f5f5",
+          "shade2": "#e5e5e5",
+          "shade3": "#d5d5d5",
+          "shade4": "#a5a5a5",
+          "shade5": "#656565",
+          "shade6": "#2a2a2a",
+          "shade7": "#000000",
+          "accent0": "#dc322f",
+          "accent1": "#cb4b16",
+          "accent2": "#b58900",
+          "accent3": "#859900",
+          "accent4": "#2aa198",
+          "accent5": "#6c71c4",
+          "accent6": "#d33682",
+          "accent7": "#073642"
+        }
+      },
+      "metadata": {
+        "inspiration": "Dracula theme",
+        "tags": ["dark", "vibrant", "modern"],
+        "category": "dark",
+        "accessibility": {
+          "contrastRatio": 7.2,
+          "wcagLevel": "AAA"
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

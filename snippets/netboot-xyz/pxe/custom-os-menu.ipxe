@@ -1,0 +1,59 @@
+#!ipxe
+# Custom OS Installation Menu for netboot.xyz
+
+# Ubuntu Installation with Autoinstall
+:ubuntu_custom
+set mirror http://releases.ubuntu.com
+set base_dir ubuntu
+set codename jammy
+set version_number 22.04
+set os_arch amd64
+set autoinstall_url http://my.autoinstall.com/
+set ubuntu_iso_url http://releases.ubuntu.com/${codename}/ubuntu-${version_number}-live-server-${os_arch}.iso
+set install_params autoinstall ip=dhcp ds=nocloud-net;s=${autoinstall_url} url=${ubuntu_iso_url}
+set dir ${mirror}/${base_dir}/dists/${version}/main/installer-${arch}/current/images/netboot
+
+kernel ${dir}/linux ${install_params} -- quiet initrd=initrd.gz
+initrd ${dir}/initrd.gz
+boot
+
+# CentOS/Rocky Linux with Kickstart
+:rocky_custom
+set install_params inst.ks=http://my.kickstart.com/ks.cfg inst.repo=http://dl.rockylinux.org/pub/rocky/${version}/BaseOS/${arch}/os
+set mirror http://dl.rockylinux.org
+set base_dir pub/rocky
+set version 9
+set arch x86_64
+set dir ${mirror}/${base_dir}/${version}/BaseOS/${arch}/os/images/pxeboot
+
+kernel ${dir}/vmlinuz ${install_params} -- quiet
+initrd ${dir}/initrd.img
+boot
+
+# Debian with Preseed
+:debian_custom
+set install_params auto=true priority=critical preseed/url=http://my.preseed.com/preseed.cfg
+set mirror http://deb.debian.org
+set base_dir debian
+set debian_version bookworm
+set arch amd64
+set mirrorcfg mirror/suite=${debian_version}
+set dir ${mirror}/${base_dir}/dists/${version}/main/installer-${arch}/current/images/netboot/debian-installer/amd64/
+
+kernel ${dir}/linux ${install_params} ${mirrorcfg} -- quiet initrd=initrd.gz
+initrd ${dir}/initrd.gz
+boot
+
+# AlmaLinux with Kickstart
+:almalinux_custom
+set ksurl http://my.kickstart.com/ks.cfg
+set install_params inst.ks=${ksurl} inst.repo=http://repo.almalinux.org/almalinux/${version}/BaseOS/${arch}/os/
+set mirror http://repo.almalinux.org
+set base_dir almalinux
+set version 8
+set arch x86_64
+set dir ${mirror}/${base_dir}/${version}/BaseOS/${arch}/os/images/pxeboot
+
+kernel ${dir}/vmlinuz ${install_params} -- quiet
+initrd ${dir}/initrd.img
+boot

@@ -1,0 +1,88 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "ES2024",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    
+    /* Emit */
+    "noEmit": true,
+    "importHelpers": false,
+    "downlevelIteration": true,
+    
+    /* Interop Constraints */
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    
+    /* Type Checking */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "useUnknownInCatchVariables": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    
+    /* Completeness */
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true,
+    
+    /* Orama-specific settings */
+    "baseUrl": ".",
+    "paths": {
+      "@orama/*": ["node_modules/@orama/*/src"],
+      "@oramacloud/*": ["node_modules/@oramacloud/*/src"]
+    },
+    
+    /* JSX */
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    
+    /* Source Map */
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    
+    /* Advanced */
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": false,
+    "noResolve": false
+  },
+  "include": [
+    "src/**/*",
+    "*.ts",
+    "*.tsx",
+    "*.js", 
+    "*.jsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "*.min.js",
+    "*.bundle.js",
+    "public"
+  ],
+  "ts-node": {
+    "esm": true,
+    "compilerOptions": {
+      "module": "ESNext",
+      "moduleResolution": "node"
+    }
+  }
+}

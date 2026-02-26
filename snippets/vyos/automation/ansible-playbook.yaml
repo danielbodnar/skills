@@ -1,0 +1,130 @@
+---
+# VyOS Ansible Playbook Example
+- name: Configure VyOS Router
+  hosts: vyos_routers
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  
+  vars:
+    ansible_network_os: vyos.vyos.vyos
+    ansible_user: vyos
+    ansible_ssh_pass: vyos
+    ansible_connection: ansible.netcommon.network_cli
+    
+    # Router configuration variables
+    router_hostname: "vyos-{{ inventory_hostname }}"
+    domain_name: "example.com"
+    wan_interface: "eth1"
+    lan_interface: "eth0"
+    lan_network: "192.168.{{ ansible_host.split('.')[-1] }}.0/24"
+    lan_gateway: "192.168.{{ ansible_host.split('.')[-1] }}.1"
+    
+  tasks:
+    - name: Gather VyOS facts
+      vyos.vyos.vyos_facts:
+        gather_subset: all
+      
+    - name: Configure system settings
+      vyos.vyos.vyos_config:
+        lines:
+          - set system host-name '{{ router_hostname }}'
+          - set system domain-name '{{ domain_name }}'
+          - set system time-zone 'UTC'
+          - set system name-server '8.8.8.8'
+          - set system name-server '8.8.4.4'
+          - set system ntp server '0.pool.ntp.org'
+          - set system ntp server '1.pool.ntp.org'
+        save: true
+      
+    - name: Configure interfaces
+      vyos.vyos.vyos_interfaces:
+        config:
+          - name: "{{ lan_interface }}"
+            description: "LAN Interface"
+            enabled: true
+          - name: "{{ wan_interface }}"
+            description: "WAN Interface"
+            enabled: true
+        state: merged
+      
+    - name: Configure IP addresses
+      vyos.vyos.vyos_l3_interfaces:
+        config:
+          - name: "{{ lan_interface }}"
+            ipv4:
+              - address: "{{ lan_gateway }}/24"
+          - name: "{{ wan_interface }}"
+            ipv4:
+              - address: dhcp
+        state: merged
+      
+    - name: Configure firewall rules
+      vyos.vyos.vyos_config:
+        lines:
+          - set firewall name OUTSIDE-IN default-action 'drop'
+          - set firewall name OUTSIDE-IN rule 10 action 'accept'
+          - set firewall name OUTSIDE-IN rule 10 state established 'enable'
+          - set firewall name OUTSIDE-IN rule 10 state related 'enable'
+          - set firewall name OUTSIDE-IN rule 20 action 'accept'
+          - set firewall name OUTSIDE-IN rule 20 protocol 'icmp'
+          - set interfaces ethernet {{ wan_interface }} firewall in name 'OUTSIDE-IN'
+        save: true
+      
+    - name: Configure NAT
+      vyos.vyos.vyos_config:
+        lines:
+          - set nat source rule 100 outbound-interface '{{ wan_interface }}'
+          - set nat source rule 100 source address '{{ lan_network }}'
+          - set nat source rule 100 translation address 'masquerade'
+        save: true
+      
+    - name: Configure DHCP server
+      vyos.vyos.vyos_config:
+        lines:
+          - set service dhcp-server shared-network-name LAN subnet {{ lan_network }} default-router '{{ lan_gateway }}'
+          - set service dhcp-server shared-network-name LAN subnet {{ lan_network }} dns-server '{{ lan_gateway }}'
+          - set service dhcp-server shared-network-name LAN subnet {{ lan_network }} domain-name '{{ domain_name }}'
+          - set service dhcp-server shared-network-name LAN subnet {{ lan_network }} range 0 start '{{ lan_gateway | regex_replace("\\d+$", "100") }}'
+          - set service dhcp-server shared-network-name LAN subnet {{ lan_network }} range 0 stop '{{ lan_gateway | regex_replace("\\d+$", "200") }}'
+        save: true
+      
+    - name: Configure DNS forwarding
+      vyos.vyos.vyos_config:
+        lines:
+          - set service dns forwarding listen-address '{{ lan_gateway }}'
+          - set service dns forwarding allow-from '{{ lan_network }}'
+          - set service dns forwarding name-server '8.8.8.8'
+          - set service dns forwarding name-server '8.8.4.4'
+        save: true
+      
+    - name: Configure SSH service
+      vyos.vyos.vyos_config:
+        lines:
+          - set service ssh port '22'
+          - set service ssh listen-address '{{ lan_gateway }}'
+        save: true
+      
+    - name: Configure BGP (if bgp_enabled is true)
+      vyos.vyos.vyos_config:
+        lines:
+          - set protocols bgp system-as '{{ bgp_as_number | default("65001") }}'
+          - set protocols bgp router-id '{{ lan_gateway }}'
+          - set protocols bgp parameters log-neighbor-changes
+        save: true
+      when: bgp_enabled | default(false) | bool
+      
+    - name: Save configuration
+      vyos.vyos.vyos_config:
+        save: true
+      
+    - name: Display router status
+      vyos.vyos.vyos_command:
+        commands:
+          - show version
+          - show interfaces
+          - show ip route
+      register: router_status
+      
+    - name: Show router information
+      debug:
+        var: router_status.stdout_lines

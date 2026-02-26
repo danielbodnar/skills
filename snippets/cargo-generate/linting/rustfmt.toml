@@ -1,0 +1,100 @@
+# rustfmt.toml - Rustfmt configuration for cargo-generate templates
+
+# Edition
+edition = "2021"
+
+# Basic formatting
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+newline_style = "Unix"
+
+# Function formatting
+fn_args_layout = "Tall"
+fn_single_line = false
+fn_call_width = 60
+fn_args_density = "Tall"
+
+# Control flow
+control_brace_style = "AlwaysSameLine"
+brace_style = "SameLineWhere"
+
+# Imports
+reorder_imports = true
+reorder_modules = true
+imports_layout = "Mixed"
+merge_imports = false
+group_imports = "StdExternalCrate"
+
+# Expressions
+binop_separator = "Front"
+combine_control_expr = true
+overflow_delimited_expr = false
+struct_field_align_threshold = 0
+indent_style = "Block"
+
+# Items
+item_brace_style = "SameLineWhere"
+struct_lit_single_line = true
+fn_single_line = false
+where_single_line = false
+empty_item_single_line = true
+
+# Comments and documentation
+comment_width = 80
+doc_comment_code_block_width = 100
+format_code_in_doc_comments = true
+normalize_comments = true
+normalize_doc_attributes = true
+wrap_comments = true
+
+# Strings and arrays
+format_strings = false
+format_macro_matchers = false
+format_macro_bodies = true
+hex_literal_case = "Preserve"
+
+# Advanced options
+use_small_heuristics = "Default"
+use_try_shorthand = true
+use_field_init_shorthand = true
+force_explicit_abi = true
+condense_wildcard_suffixes = false
+color = "Auto"
+required_version = "1.6.0"
+unstable_features = false
+
+# Specific formatting rules
+remove_nested_parens = true
+format_generated_files = true
+skip_children = false
+hide_parse_errors = false
+error_on_line_overflow = false
+error_on_unformatted = false
+report_todo = "Never"
+report_fixme = "Never"
+
+# Chain formatting
+chain_width = 60
+chains_overflow_last = false
+
+# Closure formatting
+closure_block_indent_threshold = -1
+
+# Array formatting
+array_width = 60
+attr_fn_like_width = 70
+
+# Match formatting
+match_arm_blocks = true
+match_arm_leading_pipes = "Never"
+match_block_trailing_comma = false
+
+# Struct formatting
+struct_lit_width = 18
+struct_variant_width = 35
+
+# Miscellaneous
+spaces_around_ranges = false
+type_punctuation_density = "Wide"
+version = "Two"

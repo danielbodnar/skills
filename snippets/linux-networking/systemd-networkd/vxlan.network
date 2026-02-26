@@ -1,0 +1,52 @@
+# systemd-networkd VXLAN Configuration
+# File: /etc/systemd/network/25-vxlan0.netdev
+[NetDev]
+Name=vxlan0
+Kind=vxlan
+
+[VXLAN]
+VNI=100
+Local=192.168.1.10
+Remote=192.168.1.20
+DestinationPort=4789
+Learning=yes
+
+# File: /etc/systemd/network/25-vxlan0.network
+[Match]
+Name=vxlan0
+
+[Network]
+Address=10.0.0.1/24
+
+# VXLAN with Multicast
+# File: /etc/systemd/network/25-vxlan-mc.netdev
+[NetDev]
+Name=vxlan-mc
+Kind=vxlan
+
+[VXLAN]
+VNI=200
+Local=192.168.1.10
+Group=239.1.1.1
+DestinationPort=4789
+Learning=yes
+
+# File: /etc/systemd/network/25-vxlan-mc.network
+[Match]
+Name=vxlan-mc
+
+[Network]
+Address=10.0.1.1/24
+
+# VXLAN with Bridge
+# File: /etc/systemd/network/25-br-vxlan.netdev
+[NetDev]
+Name=br-vxlan
+Kind=bridge
+
+# File: /etc/systemd/network/25-br-vxlan.network
+[Match]
+Name=br-vxlan
+
+[Network]
+Address=10.0.2.1/24

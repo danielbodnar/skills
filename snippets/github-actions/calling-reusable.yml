@@ -1,0 +1,73 @@
+# Calling Reusable Workflows
+# Examples of how to use reusable workflows
+
+name: Call Reusable Workflows
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Call local reusable workflow
+  call-local-reusable:
+    uses: ./.github/workflows/reusable-workflows.yml
+    with:
+      node_version: '20'
+      package_manager: 'bun'
+      run_tests: true
+      environment: 'staging'
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
+
+  # Call external reusable workflow
+  call-external-reusable:
+    uses: organization/shared-workflows/.github/workflows/ci.yml@v1
+    with:
+      language: 'javascript'
+      runner: 'ubuntu-latest'
+    secrets: inherit
+
+  # Call reusable workflow with matrix
+  call-with-matrix:
+    strategy:
+      matrix:
+        environment: [staging, production]
+        include:
+          - environment: staging
+            deploy_key: STAGING_DEPLOY_KEY
+          - environment: production
+            deploy_key: PROD_DEPLOY_KEY
+    
+    uses: ./.github/workflows/reusable-workflows.yml
+    with:
+      node_version: '20'
+      package_manager: 'npm'
+      environment: ${{ matrix.environment }}
+    secrets:
+      DEPLOY_KEY: ${{ secrets[matrix.deploy_key] }}
+
+  # Use outputs from reusable workflow
+  use-reusable-outputs:
+    needs: call-local-reusable
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Use build outputs
+      run: |
+        echo "Built version: ${{ needs.call-local-reusable.outputs.build_version }}"
+        echo "Artifact URL: ${{ needs.call-local-reusable.outputs.artifact_url }}"
+
+  # Conditional reusable workflow call
+  conditional-reusable:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/reusable-workflows.yml
+    with:
+      node_version: '20'
+      package_manager: 'bun'
+      environment: 'production'
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      DEPLOY_KEY: ${{ secrets.PROD_DEPLOY_KEY }}

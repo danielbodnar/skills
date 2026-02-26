@@ -1,0 +1,494 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OpenRouter Chat Completions API Schema",
+  "description": "Schema for OpenRouter chat completions API request and response",
+  "definitions": {
+    "Message": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "role": {
+              "type": "string",
+              "enum": ["user", "assistant", "system"]
+            },
+            "content": {
+              "oneOf": [
+                { "type": "string" },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/ContentPart"
+                  }
+                }
+              ]
+            },
+            "name": {
+              "type": "string",
+              "description": "Name to prepend to content for non-OpenAI models"
+            }
+          },
+          "required": ["role", "content"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "role": {
+              "type": "string",
+              "enum": ["tool"]
+            },
+            "content": {
+              "type": "string"
+            },
+            "tool_call_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": ["role", "content", "tool_call_id"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ContentPart": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["text"]
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": ["type", "text"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["image_url"]
+            },
+            "image_url": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "URL or base64 encoded image data"
+                },
+                "detail": {
+                  "type": "string",
+                  "description": "Detail level for image processing"
+                }
+              },
+              "required": ["url"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["type", "image_url"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Tool": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["function"]
+        },
+        "function": {
+          "$ref": "#/definitions/FunctionDescription"
+        }
+      },
+      "required": ["type", "function"],
+      "additionalProperties": false
+    },
+    "FunctionDescription": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parameters": {
+          "type": "object",
+          "description": "JSON Schema object"
+        }
+      },
+      "required": ["name", "parameters"],
+      "additionalProperties": false
+    },
+    "ToolChoice": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["none", "auto"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["function"]
+            },
+            "function": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["type", "function"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ProviderPreferences": {
+      "type": "object",
+      "properties": {
+        "sort": {
+          "type": "string",
+          "enum": ["price", "throughput", "quality"],
+          "description": "Sort providers by criteria"
+        },
+        "only": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only use these providers"
+        },
+        "ignore": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ignore these providers"
+        },
+        "quantizations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["int4", "int8", "fp8", "fp16", "bf16"]
+          },
+          "description": "Required quantization types"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ResponseFormat": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["json_object", "json_schema"]
+        },
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "strict": {
+              "type": "boolean"
+            },
+            "schema": {
+              "type": "object",
+              "description": "JSON Schema definition"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "request": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Message"
+          },
+          "description": "Array of conversation messages"
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Alternative to messages for completion-style requests"
+        },
+        "model": {
+          "type": "string",
+          "description": "Model identifier (e.g., 'openai/gpt-4o')"
+        },
+        "response_format": {
+          "$ref": "#/definitions/ResponseFormat"
+        },
+        "stop": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          ]
+        },
+        "stream": {
+          "type": "boolean",
+          "description": "Enable streaming responses"
+        },
+        "max_tokens": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Maximum tokens to generate"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Sampling temperature"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Tool"
+          }
+        },
+        "tool_choice": {
+          "$ref": "#/definitions/ToolChoice"
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Random seed for deterministic outputs"
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Nucleus sampling parameter"
+        },
+        "top_k": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Top-k sampling parameter"
+        },
+        "frequency_penalty": {
+          "type": "number",
+          "minimum": -2,
+          "maximum": 2
+        },
+        "presence_penalty": {
+          "type": "number",
+          "minimum": -2,
+          "maximum": 2
+        },
+        "repetition_penalty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "logit_bias": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "top_logprobs": {
+          "type": "integer",
+          "description": "Number of most likely tokens to return"
+        },
+        "min_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "top_a": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "prediction": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["content"]
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": ["type", "content"],
+          "additionalProperties": false
+        },
+        "transforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "OpenRouter transform strategies"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Fallback models for routing"
+        },
+        "route": {
+          "type": "string",
+          "enum": ["fallback"],
+          "description": "Routing strategy"
+        },
+        "provider": {
+          "$ref": "#/definitions/ProviderPreferences"
+        },
+        "user": {
+          "type": "string",
+          "description": "End-user identifier for abuse detection"
+        }
+      },
+      "oneOf": [
+        { "required": ["messages"] },
+        { "required": ["prompt"] }
+      ],
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "finish_reason": {
+                    "type": ["string", "null"]
+                  },
+                  "native_finish_reason": {
+                    "type": ["string", "null"]
+                  },
+                  "message": {
+                    "type": "object",
+                    "properties": {
+                      "content": {
+                        "type": ["string", "null"]
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "tool_calls": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": ["function"]
+                            },
+                            "function": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "arguments": {
+                                  "type": "string",
+                                  "description": "JSON string of function arguments"
+                                }
+                              },
+                              "required": ["name", "arguments"],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": ["id", "type", "function"],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": ["role"],
+                    "additionalProperties": false
+                  },
+                  "error": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "number"
+                      },
+                      "message": {
+                        "type": "string"
+                      },
+                      "metadata": {
+                        "type": "object"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "created": {
+          "type": "number",
+          "description": "Unix timestamp"
+        },
+        "model": {
+          "type": "string"
+        },
+        "object": {
+          "type": "string",
+          "enum": ["chat.completion", "chat.completion.chunk"]
+        },
+        "system_fingerprint": {
+          "type": "string"
+        },
+        "usage": {
+          "type": "object",
+          "properties": {
+            "prompt_tokens": {
+              "type": "number"
+            },
+            "completion_tokens": {
+              "type": "number"
+            },
+            "total_tokens": {
+              "type": "number"
+            }
+          },
+          "required": ["prompt_tokens", "completion_tokens", "total_tokens"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["id", "choices", "created", "model", "object"],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

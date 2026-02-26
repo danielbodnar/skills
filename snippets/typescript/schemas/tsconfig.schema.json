@@ -1,0 +1,438 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TypeScript Configuration",
+  "description": "Schema for TypeScript configuration files (tsconfig.json)",
+  "type": "object",
+  "properties": {
+    "compilerOptions": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "enum": ["ES3", "ES5", "ES6", "ES2015", "ES2016", "ES2017", "ES2018", "ES2019", "ES2020", "ES2021", "ES2022", "ES2023", "ES2024", "ESNext"],
+          "default": "ES5",
+          "description": "Specify ECMAScript target version"
+        },
+        "module": {
+          "type": "string",
+          "enum": ["CommonJS", "AMD", "UMD", "System", "ES6", "ES2015", "ES2020", "ES2022", "ESNext", "Node16", "NodeNext", "bundler"],
+          "default": "CommonJS",
+          "description": "Specify module code generation"
+        },
+        "lib": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["ES5", "ES6", "ES2015", "ES2016", "ES2017", "ES2018", "ES2019", "ES2020", "ES2021", "ES2022", "ES2023", "ES2024", "ESNext", "DOM", "DOM.Iterable", "WebWorker", "ScriptHost"]
+          },
+          "description": "Specify library files to be included in the compilation"
+        },
+        "allowJs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow JavaScript files to be compiled"
+        },
+        "checkJs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Report errors in .js files"
+        },
+        "jsx": {
+          "type": "string",
+          "enum": ["preserve", "react", "react-jsx", "react-jsxdev", "react-native"],
+          "description": "Specify JSX code generation"
+        },
+        "declaration": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate corresponding .d.ts file"
+        },
+        "declarationMap": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate a sourcemap for each corresponding .d.ts file"
+        },
+        "sourceMap": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate corresponding .map file"
+        },
+        "outFile": {
+          "type": "string",
+          "description": "Concatenate and emit output to single file"
+        },
+        "outDir": {
+          "type": "string",
+          "description": "Redirect output structure to the directory"
+        },
+        "rootDir": {
+          "type": "string",
+          "description": "Specify the root directory of input files"
+        },
+        "composite": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable project compilation"
+        },
+        "tsBuildInfoFile": {
+          "type": "string",
+          "description": "Specify file to store incremental compilation information"
+        },
+        "removeComments": {
+          "type": "boolean",
+          "default": false,
+          "description": "Remove comments from output"
+        },
+        "noEmit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Do not emit outputs"
+        },
+        "importHelpers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Import emit helpers from 'tslib'"
+        },
+        "downlevelIteration": {
+          "type": "boolean",
+          "default": false,
+          "description": "Provide full support for iterables in for-of, spread, and destructuring when targeting ES5 or ES3"
+        },
+        "isolatedModules": {
+          "type": "boolean",
+          "default": false,
+          "description": "Transpile each file as a separate module"
+        },
+        "strict": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable all strict type-checking options"
+        },
+        "noImplicitAny": {
+          "type": "boolean",
+          "default": false,
+          "description": "Raise error on expressions and declarations with an implied 'any' type"
+        },
+        "strictNullChecks": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable strict null checks"
+        },
+        "strictFunctionTypes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable strict checking of function types"
+        },
+        "strictBindCallApply": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable strict 'bind', 'call', and 'apply' methods on functions"
+        },
+        "strictPropertyInitialization": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable strict checking of property initialization in classes"
+        },
+        "noImplicitThis": {
+          "type": "boolean",
+          "default": false,
+          "description": "Raise error on 'this' expressions with an implied 'any' type"
+        },
+        "alwaysStrict": {
+          "type": "boolean",
+          "default": false,
+          "description": "Parse in strict mode and emit 'use strict' for each source file"
+        },
+        "noUnusedLocals": {
+          "type": "boolean",
+          "default": false,
+          "description": "Report errors on unused locals"
+        },
+        "noUnusedParameters": {
+          "type": "boolean",
+          "default": false,
+          "description": "Report errors on unused parameters"
+        },
+        "noImplicitReturns": {
+          "type": "boolean",
+          "default": false,
+          "description": "Report error when not all code paths in function return a value"
+        },
+        "noFallthroughCasesInSwitch": {
+          "type": "boolean",
+          "default": false,
+          "description": "Report errors for fallthrough cases in switch statement"
+        },
+        "noUncheckedIndexedAccess": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include 'undefined' in index signature results"
+        },
+        "noImplicitOverride": {
+          "type": "boolean",
+          "default": false,
+          "description": "Require explicit 'override' modifier for overridden methods"
+        },
+        "exactOptionalPropertyTypes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Interpret optional property types as written, rather than adding undefined"
+        },
+        "noPropertyAccessFromIndexSignature": {
+          "type": "boolean",
+          "default": false,
+          "description": "Require undeclared properties from index signatures to use element accesses"
+        },
+        "moduleResolution": {
+          "type": "string",
+          "enum": ["node", "classic", "node16", "nodenext", "bundler"],
+          "default": "node",
+          "description": "Specify module resolution strategy"
+        },
+        "baseUrl": {
+          "type": "string",
+          "description": "Base directory to resolve non-absolute module names"
+        },
+        "paths": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": "A series of entries which re-map imports to lookup locations relative to the 'baseUrl'"
+        },
+        "rootDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of root folders whose combined content represents the structure of the project at runtime"
+        },
+        "typeRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of folders to include type definitions from"
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Type declaration files to be included in compilation"
+        },
+        "allowSyntheticDefaultImports": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow default imports from modules with no default export"
+        },
+        "esModuleInterop": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables emit interoperability between CommonJS and ES Modules"
+        },
+        "preserveSymlinks": {
+          "type": "boolean",
+          "default": false,
+          "description": "Do not resolve the real path of symlinks"
+        },
+        "allowUmdGlobalAccess": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow accessing UMD globals from modules"
+        },
+        "sourceRoot": {
+          "type": "string",
+          "description": "Specify the location where debugger should locate TypeScript files instead of source locations"
+        },
+        "mapRoot": {
+          "type": "string",
+          "description": "Specify the location where debugger should locate map files instead of generated locations"
+        },
+        "inlineSourceMap": {
+          "type": "boolean",
+          "default": false,
+          "description": "Emit a single file with source maps instead of having a separate file"
+        },
+        "inlineSources": {
+          "type": "boolean",
+          "default": false,
+          "description": "Emit the source alongside the sourcemaps within a single file"
+        },
+        "experimentalDecorators": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables experimental support for ES7 decorators"
+        },
+        "emitDecoratorMetadata": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables experimental support for emitting type metadata for decorators"
+        },
+        "skipLibCheck": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip type checking of declaration files"
+        },
+        "forceConsistentCasingInFileNames": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disallow inconsistently-cased references to the same file"
+        },
+        "useDefineForClassFields": {
+          "type": "boolean",
+          "description": "Use ECMAScript-standard semantics for class fields"
+        },
+        "verbatimModuleSyntax": {
+          "type": "boolean",
+          "default": false,
+          "description": "Do not transform or elide any imports or exports not marked as type-only"
+        },
+        "allowImportingTsExtensions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow imports to include TypeScript file extensions"
+        },
+        "resolveJsonModule": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include modules imported with .json extension"
+        },
+        "noEmitOnError": {
+          "type": "boolean",
+          "default": false,
+          "description": "Do not emit outputs if any errors were reported"
+        },
+        "preserveConstEnums": {
+          "type": "boolean",
+          "default": false,
+          "description": "Do not erase const enum declarations in generated code"
+        },
+        "declarationDir": {
+          "type": "string",
+          "description": "Output directory for generated declaration files"
+        },
+        "incremental": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable incremental compilation"
+        },
+        "assumeChangesOnlyAffectDirectDependencies": {
+          "type": "boolean",
+          "default": false,
+          "description": "Have recompiles in incremental and watch assume that changes within a file will only affect files directly depending on it"
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of files to be included in the compilation"
+    },
+    "include": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of glob patterns to include in the compilation"
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of glob patterns to exclude from the compilation"
+    },
+    "extends": {
+      "type": "string",
+      "description": "Path to another config file to inherit from"
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the referenced project"
+          },
+          "prepend": {
+            "type": "boolean",
+            "description": "Prepend the output of this project to the output of the current project"
+          }
+        },
+        "required": ["path"]
+      },
+      "description": "Project references for composite projects"
+    },
+    "typeAcquisition": {
+      "type": "object",
+      "properties": {
+        "enable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable automatic type acquisition"
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of type definitions to include"
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of type definitions to exclude"
+        }
+      },
+      "description": "Auto type acquisition options"
+    },
+    "watchOptions": {
+      "type": "object",
+      "properties": {
+        "watchFile": {
+          "type": "string",
+          "enum": ["fixedPollingInterval", "priorityPollingInterval", "dynamicPriorityPolling", "useFsEvents", "useFsEventsOnParentDirectory"],
+          "description": "Strategy for watching individual files"
+        },
+        "watchDirectory": {
+          "type": "string",
+          "enum": ["fixedPollingInterval", "dynamicPriorityPolling", "useFsEvents"],
+          "description": "Strategy for watching directories"
+        },
+        "fallbackPolling": {
+          "type": "string",
+          "enum": ["fixedPollingInterval", "priorityPollingInterval", "dynamicPriorityPolling"],
+          "description": "Fallback polling strategy when file system events are not available"
+        },
+        "synchronousWatchDirectory": {
+          "type": "boolean",
+          "description": "Synchronously watch directories"
+        },
+        "excludeDirectories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of directories to exclude from watching"
+        },
+        "excludeFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files to exclude from watching"
+        }
+      },
+      "description": "Watch options for file system watching"
+    }
+  }
+}

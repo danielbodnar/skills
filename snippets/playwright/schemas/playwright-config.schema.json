@@ -1,0 +1,356 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Playwright Configuration Schema",
+  "description": "Schema for playwright.config.ts configuration file",
+  "type": "object",
+  "properties": {
+    "testDir": {
+      "type": "string",
+      "description": "Directory where test files are located",
+      "default": "./tests"
+    },
+    "testMatch": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "description": "Glob patterns to match test files"
+    },
+    "testIgnore": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "description": "Glob patterns to ignore test files"
+    },
+    "timeout": {
+      "type": "number",
+      "description": "Timeout for each test in milliseconds",
+      "default": 30000
+    },
+    "fullyParallel": {
+      "type": "boolean",
+      "description": "Run tests in parallel",
+      "default": false
+    },
+    "forbidOnly": {
+      "type": "boolean",
+      "description": "Forbid test.only in CI",
+      "default": false
+    },
+    "retries": {
+      "type": "number",
+      "description": "Number of retries for failed tests",
+      "default": 0
+    },
+    "workers": {
+      "type": "number",
+      "description": "Number of parallel workers",
+      "default": 1
+    },
+    "reporter": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["dot", "line", "list", "html", "json", "junit", "github", "null"]
+        },
+        {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "description": "Reporter configuration"
+    },
+    "use": {
+      "type": "object",
+      "description": "Global test options",
+      "properties": {
+        "baseURL": {
+          "type": "string",
+          "description": "Base URL for tests"
+        },
+        "browserName": {
+          "type": "string",
+          "enum": ["chromium", "firefox", "webkit"],
+          "description": "Browser to use"
+        },
+        "headless": {
+          "type": "boolean",
+          "description": "Run browser in headless mode",
+          "default": true
+        },
+        "viewport": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            }
+          },
+          "description": "Browser viewport size"
+        },
+        "ignoreHTTPSErrors": {
+          "type": "boolean",
+          "description": "Ignore HTTPS errors",
+          "default": false
+        },
+        "video": {
+          "type": "string",
+          "enum": ["off", "on", "retain-on-failure", "on-first-retry"],
+          "description": "Video recording mode"
+        },
+        "screenshot": {
+          "type": "string",
+          "enum": ["off", "on", "only-on-failure"],
+          "description": "Screenshot mode"
+        },
+        "trace": {
+          "type": "string",
+          "enum": ["off", "on", "retain-on-failure", "on-first-retry"],
+          "description": "Trace recording mode"
+        },
+        "actionTimeout": {
+          "type": "number",
+          "description": "Timeout for actions in milliseconds",
+          "default": 5000
+        },
+        "navigationTimeout": {
+          "type": "number",
+          "description": "Timeout for navigation in milliseconds",
+          "default": 30000
+        }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "description": "Project configurations",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Project name"
+          },
+          "testDir": {
+            "type": "string",
+            "description": "Test directory for this project"
+          },
+          "testMatch": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "Test patterns for this project"
+          },
+          "use": {
+            "type": "object",
+            "description": "Project-specific options"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Project dependencies"
+          },
+          "teardown": {
+            "type": "string",
+            "description": "Teardown project name"
+          }
+        }
+      }
+    },
+    "globalSetup": {
+      "type": "string",
+      "description": "Path to global setup file"
+    },
+    "globalTeardown": {
+      "type": "string",
+      "description": "Path to global teardown file"
+    },
+    "webServer": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "Command to start the web server"
+            },
+            "port": {
+              "type": "number",
+              "description": "Port number"
+            },
+            "url": {
+              "type": "string",
+              "description": "URL to wait for"
+            },
+            "reuseExistingServer": {
+              "type": "boolean",
+              "description": "Reuse existing server if available"
+            },
+            "timeout": {
+              "type": "number",
+              "description": "Timeout for server startup"
+            },
+            "stdout": {
+              "type": "string",
+              "enum": ["pipe", "ignore"],
+              "description": "How to handle stdout"
+            },
+            "stderr": {
+              "type": "string",
+              "enum": ["pipe", "ignore"],
+              "description": "How to handle stderr"
+            }
+          },
+          "required": ["command"]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "port": {
+                "type": "number"
+              },
+              "url": {
+                "type": "string"
+              },
+              "reuseExistingServer": {
+                "type": "boolean"
+              },
+              "timeout": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Web server configuration"
+    },
+    "expect": {
+      "type": "object",
+      "description": "Expect configuration",
+      "properties": {
+        "timeout": {
+          "type": "number",
+          "description": "Timeout for expect assertions",
+          "default": 5000
+        },
+        "toMatchSnapshot": {
+          "type": "object",
+          "properties": {
+            "threshold": {
+              "type": "number",
+              "description": "Threshold for image comparison"
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["RGB", "L"],
+              "description": "Color mode for comparison"
+            }
+          }
+        },
+        "toHaveScreenshot": {
+          "type": "object",
+          "properties": {
+            "threshold": {
+              "type": "number",
+              "description": "Threshold for screenshot comparison"
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["RGB", "L"],
+              "description": "Color mode for comparison"
+            }
+          }
+        }
+      }
+    },
+    "outputDir": {
+      "type": "string",
+      "description": "Directory for test artifacts",
+      "default": "test-results"
+    },
+    "snapshotDir": {
+      "type": "string",
+      "description": "Directory for snapshots"
+    },
+    "updateSnapshots": {
+      "type": "string",
+      "enum": ["all", "none", "missing"],
+      "description": "Update snapshots mode"
+    },
+    "maxFailures": {
+      "type": "number",
+      "description": "Maximum number of test failures"
+    },
+    "preserveOutput": {
+      "type": "string",
+      "enum": ["always", "never", "failures-only"],
+      "description": "When to preserve output directory"
+    },
+    "build": {
+      "type": "object",
+      "description": "Build configuration",
+      "properties": {
+        "external": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "External dependencies"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Custom metadata",
+      "additionalProperties": true
+    }
+  }
+}

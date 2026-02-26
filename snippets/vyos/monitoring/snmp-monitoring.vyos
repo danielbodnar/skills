@@ -1,0 +1,143 @@
+# VyOS SNMP Monitoring Configuration
+
+configure
+
+# SNMP service configuration
+set service snmp community 'public' authorization 'ro'
+set service snmp community 'public' network '192.168.1.0/24'
+set service snmp community 'public' network '10.0.0.0/8'
+
+# SNMP v3 user configuration (more secure)
+set service snmp v3 user monitor auth type 'sha'
+set service snmp v3 user monitor auth plaintext-password 'monitorpassword123'
+set service snmp v3 user monitor privacy type 'aes'
+set service snmp v3 user monitor privacy plaintext-password 'privacypassword123'
+set service snmp v3 user monitor group 'readonly'
+
+# SNMP v3 group configuration
+set service snmp v3 group readonly mode 'ro'
+set service snmp v3 group readonly seclevel 'priv'
+set service snmp v3 group readonly view 'defaultview'
+
+# SNMP view configuration
+set service snmp v3 view defaultview oid '1.3.6.1.2.1.1'
+set service snmp v3 view defaultview oid '1.3.6.1.2.1.2'
+set service snmp v3 view defaultview oid '1.3.6.1.2.1.4'
+set service snmp v3 view defaultview oid '1.3.6.1.4.1.74.1.32'
+
+# System information
+set service snmp contact 'admin@example.com'
+set service snmp description 'VyOS Router - Site Office'
+set service snmp location 'Server Room - Building A'
+
+# SNMP listen configuration
+set service snmp listen-address '192.168.1.1' port '161'
+set service snmp listen-address '127.0.0.1' port '161'
+
+# SNMP trap configuration
+set service snmp trap-target '192.168.1.10' community 'public'
+set service snmp trap-target '192.168.1.10' port '162'
+
+commit
+save
+exit
+
+# ================================================================
+# Monitoring Commands and Scripts
+# ================================================================
+
+# Basic SNMP queries (from monitoring server):
+# snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.1.1.0  # System description
+# snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.2.2.1.2  # Interface names
+# snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.2.2.1.10  # Interface octets in
+# snmpwalk -v2c -c public 192.168.1.1 1.3.6.1.2.1.2.2.1.16  # Interface octets out
+
+# SNMP v3 query example:
+# snmpwalk -v3 -u monitor -l authPriv -a SHA -A monitorpassword123 -x AES -X privacypassword123 192.168.1.1 1.3.6.1.2.1.1
+
+# ================================================================
+# Syslog Configuration for Centralized Logging
+# ================================================================
+
+configure
+
+# Syslog configuration
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'
+
+# Remote syslog server
+set system syslog host '192.168.1.50' facility all level 'info'
+set system syslog host '192.168.1.50' facility local7 level 'debug'
+set system syslog host '192.168.1.50' port '514'
+
+# Local log files
+set system syslog file auth facility auth level 'info'
+set system syslog file messages facility all level 'info'
+set system syslog file firewall facility kern level 'debug'
+
+commit
+save
+exit
+
+# ================================================================
+# Network Performance Monitoring Script
+# ================================================================
+
+#!/bin/bash
+# /config/scripts/network-monitor.sh
+# VyOS Network Performance Monitoring Script
+
+LOGFILE="/var/log/network-monitor.log"
+DATE=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Function to log with timestamp
+log_message() {
+    echo "[$DATE] $1" >> $LOGFILE
+}
+
+# Check interface status
+for interface in eth0 eth1 eth2; do
+    if ip link show $interface > /dev/null 2>&1; then
+        STATUS=$(ip link show $interface | grep -o "state [A-Z]*" | cut -d' ' -f2)
+        log_message "Interface $interface status: $STATUS"
+        
+        # Get interface statistics
+        RX_BYTES=$(cat /sys/class/net/$interface/statistics/rx_bytes)
+        TX_BYTES=$(cat /sys/class/net/$interface/statistics/tx_bytes)
+        RX_ERRORS=$(cat /sys/class/net/$interface/statistics/rx_errors)
+        TX_ERRORS=$(cat /sys/class/net/$interface/statistics/tx_errors)
+        
+        log_message "Interface $interface - RX: $RX_BYTES bytes, TX: $TX_BYTES bytes"
+        log_message "Interface $interface - RX Errors: $RX_ERRORS, TX Errors: $TX_ERRORS"
+    fi
+done
+
+# Check BGP status (if BGP is configured)
+if vtysh -c "show ip bgp summary" > /dev/null 2>&1; then
+    BGP_NEIGHBORS=$(vtysh -c "show ip bgp summary" | grep -c "^[0-9]")
+    log_message "BGP neighbors configured: $BGP_NEIGHBORS"
+fi
+
+# Check OSPF status (if OSPF is configured)
+if vtysh -c "show ip ospf neighbor" > /dev/null 2>&1; then
+    OSPF_NEIGHBORS=$(vtysh -c "show ip ospf neighbor" | grep -c "Full")
+    log_message "OSPF neighbors in Full state: $OSPF_NEIGHBORS"
+fi
+
+# Check VPN tunnels
+IPSEC_TUNNELS=$(ipsec status | grep -c "ESTABLISHED")
+log_message "IPsec tunnels established: $IPSEC_TUNNELS"
+
+# Memory and CPU usage
+MEMORY_USAGE=$(free | grep Mem | awk '{printf "%.2f", $3/$2 * 100.0}')
+CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+log_message "Memory usage: $MEMORY_USAGE%, CPU usage: $CPU_USAGE%"
+
+# Disk usage
+DISK_USAGE=$(df -h / | tail -1 | awk '{print $5}')
+log_message "Disk usage: $DISK_USAGE"
+
+# ================================================================
+# Crontab entry for regular monitoring (add to crontab -e):
+# */5 * * * * /config/scripts/network-monitor.sh
+# ================================================================

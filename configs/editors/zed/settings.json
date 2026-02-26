@@ -1,0 +1,109 @@
+{
+  "theme": "Catppuccin Mocha",
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 14,
+  "ui_font_size": 14,
+  "tab_size": 2,
+  "hard_tabs": false,
+  "preferred_line_length": 100,
+  "soft_wrap": "preferred_line_length",
+  "format_on_save": "on",
+  "formatter": "language_server",
+  "ensure_final_newline_on_save": true,
+  "remove_trailing_whitespace_on_save": true,
+  "show_whitespaces": "selection",
+  "relative_line_numbers": true,
+  "scroll_beyond_last_line": "off",
+  "vertical_scroll_margin": 10,
+  "cursor_blink": false,
+  "vim_mode": true,
+  "terminal": {
+    "shell": {
+      "program": "nu"
+    },
+    "font_family": "JetBrains Mono",
+    "font_size": 13,
+    "working_directory": "current_project_directory"
+  },
+  "file_types": {
+    "JSON": ["jsonc", "json5"]
+  },
+  "languages": {
+    "TypeScript": {
+      "tab_size": 2,
+      "formatter": "language_server",
+      "language_servers": ["typescript-language-server", "biome"]
+    },
+    "JavaScript": {
+      "tab_size": 2,
+      "formatter": "language_server",
+      "language_servers": ["typescript-language-server", "biome"]
+    },
+    "Rust": {
+      "tab_size": 4,
+      "formatter": "language_server",
+      "language_servers": ["rust-analyzer"]
+    },
+    "Nu": {
+      "tab_size": 2
+    },
+    "TOML": {
+      "tab_size": 2,
+      "language_servers": ["taplo"]
+    },
+    "JSON": {
+      "tab_size": 2,
+      "formatter": "language_server"
+    },
+    "YAML": {
+      "tab_size": 2
+    },
+    "Markdown": {
+      "soft_wrap": "preferred_line_length",
+      "preferred_line_length": 80
+    }
+  },
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "check": {
+          "command": "clippy"
+        },
+        "cargo": {
+          "allFeatures": true
+        },
+        "procMacro": {
+          "enable": true
+        }
+      }
+    },
+    "biome": {
+      "settings": {
+        "require_config_file": true
+      }
+    }
+  },
+  "git": {
+    "inline_blame": {
+      "enabled": true,
+      "delay_ms": 500
+    }
+  },
+  "inlay_hints": {
+    "enabled": true,
+    "show_type_hints": true,
+    "show_parameter_hints": false
+  },
+  "project_panel": {
+    "dock": "left",
+    "git_status": true,
+    "auto_fold_dirs": true
+  },
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/node_modules",
+    "**/target",
+    "**/dist",
+    "**/.wrangler"
+  ]
+}

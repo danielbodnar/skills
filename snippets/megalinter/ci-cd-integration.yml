@@ -1,0 +1,447 @@
+# MegaLinter CI/CD Integration Examples
+
+# === GitLab CI Configuration ===
+# File: .gitlab-ci.yml
+stages:
+  - lint
+
+megalinter:
+  stage: lint
+  image: oxsecurity/megalinter:latest
+  script: [ "true" ]
+  variables:
+    DEFAULT_BRANCH: main
+    APPLY_FIXES: all
+    FILEIO_REPORTER: "true"
+    GITLAB_ACCESS_TOKEN: $GITLAB_ACCESS_TOKEN
+  artifacts:
+    when: always
+    reports:
+      junit: megalinter-reports/megalinter-report.xml
+    paths:
+      - megalinter-reports/
+    expire_in: 1 week
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# GitLab CI with flavor
+megalinter-javascript:
+  stage: lint
+  image: oxsecurity/megalinter-javascript:latest
+  script: [ "true" ]
+  variables:
+    DEFAULT_BRANCH: main
+    JAVASCRIPT_ES_CONFIG_FILE: .eslintrc.json
+    APPLY_FIXES: all
+  only:
+    changes:
+      - "**/*.js"
+      - "**/*.ts"
+      - "package*.json"
+
+---
+# === Azure DevOps Pipeline ===
+# File: azure-pipelines.yml
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+- job: MegaLinter
+  displayName: 'MegaLinter'
+  steps:
+  - checkout: self
+    fetchDepth: 0
+    
+  - task: Docker@2
+    displayName: 'Run MegaLinter'
+    inputs:
+      command: 'run'
+      arguments: |
+        --rm 
+        -v $(Build.SourcesDirectory):/tmp/lint 
+        -e DEFAULT_BRANCH=$(Build.SourceBranch) 
+        -e BUILD_BUILDNUMBER=$(Build.BuildNumber)
+        -e SYSTEM_ACCESSTOKEN=$(System.AccessToken)
+        -e APPLY_FIXES=all
+        -e FILEIO_REPORTER=true
+        oxsecurity/megalinter:latest
+
+  - task: PublishTestResults@2
+    condition: always()
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: 'megalinter-reports/megalinter-report.xml'
+      testRunTitle: 'MegaLinter Results'
+
+  - task: PublishBuildArtifacts@1
+    condition: always()
+    inputs:
+      pathToPublish: 'megalinter-reports'
+      artifactName: 'MegaLinter Reports'
+
+---
+# === Jenkins Pipeline ===
+# File: Jenkinsfile
+pipeline {
+    agent any
+    
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+    
+    environment {
+        DEFAULT_BRANCH = 'main'
+        MEGALINTER_IMAGE = 'oxsecurity/megalinter:latest'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('MegaLinter') {
+            steps {
+                script {
+                    docker.image(env.MEGALINTER_IMAGE).inside("-v ${WORKSPACE}:/tmp/lint") {
+                        sh '''
+                            export DEFAULT_BRANCH=${BRANCH_NAME}
+                            export BUILD_NUMBER=${BUILD_NUMBER}
+                            export APPLY_FIXES=all
+                            export FILEIO_REPORTER=true
+                            export PARALLEL=true
+                            /entrypoint.sh
+                        '''
+                    }
+                }
+            }
+            post {
+                always {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'megalinter-reports',
+                        reportFiles: 'megalinter-report.html',
+                        reportName: 'MegaLinter Report'
+                    ])
+                    
+                    archiveArtifacts artifacts: 'megalinter-reports/**', allowEmptyArchive: true
+                    
+                    publishTestResults testResultsPattern: 'megalinter-reports/megalinter-report.xml'
+                }
+            }
+        }
+    }
+}
+
+---
+# === Bitbucket Pipelines ===
+# File: bitbucket-pipelines.yml
+image: atlassian/default-image:4
+
+pipelines:
+  default:
+    - step:
+        name: MegaLinter
+        image: oxsecurity/megalinter:latest
+        script:
+          - echo "Running MegaLinter..."
+        after-script:
+          - echo "MegaLinter completed"
+        artifacts:
+          - megalinter-reports/**
+
+  pull-requests:
+    '**':
+      - step:
+          name: MegaLinter PR Check
+          image: oxsecurity/megalinter:latest
+          script:
+            - export DEFAULT_BRANCH=$BITBUCKET_PR_DESTINATION_BRANCH
+            - export APPLY_FIXES=all
+            - export FILEIO_REPORTER=true
+          artifacts:
+            - megalinter-reports/**
+
+  branches:
+    main:
+      - step:
+          name: MegaLinter Main Branch
+          image: oxsecurity/megalinter:latest
+          script:
+            - export DEFAULT_BRANCH=main
+            - export VALIDATE_ALL_CODEBASE=true
+            - export APPLY_FIXES=none
+          artifacts:
+            - megalinter-reports/**
+
+---
+# === CircleCI Configuration ===
+# File: .circleci/config.yml
+version: 2.1
+
+executors:
+  megalinter-executor:
+    docker:
+      - image: oxsecurity/megalinter:latest
+    working_directory: /tmp/lint
+
+jobs:
+  megalinter:
+    executor: megalinter-executor
+    steps:
+      - checkout
+      - run:
+          name: Run MegaLinter
+          command: |
+            export DEFAULT_BRANCH=main
+            export APPLY_FIXES=all
+            export FILEIO_REPORTER=true
+            export PARALLEL=true
+            /entrypoint.sh
+      - store_artifacts:
+          path: megalinter-reports
+      - store_test_results:
+          path: megalinter-reports
+
+workflows:
+  version: 2
+  lint-and-test:
+    jobs:
+      - megalinter:
+          filters:
+            branches:
+              ignore: /gh-pages/
+
+---
+# === Travis CI Configuration ===
+# File: .travis.yml
+language: minimal
+services:
+  - docker
+
+env:
+  - DEFAULT_BRANCH=main
+  - APPLY_FIXES=all
+  - FILEIO_REPORTER=true
+
+script:
+  - docker run --rm 
+    -v $TRAVIS_BUILD_DIR:/tmp/lint 
+    -e DEFAULT_BRANCH=$TRAVIS_BRANCH
+    -e BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
+    -e APPLY_FIXES=$APPLY_FIXES
+    -e FILEIO_REPORTER=$FILEIO_REPORTER
+    oxsecurity/megalinter:latest
+
+after_script:
+  - ls -la megalinter-reports/ || true
+
+---
+# === Drone CI Configuration ===
+# File: .drone.yml
+kind: pipeline
+type: docker
+name: megalinter
+
+steps:
+- name: megalinter
+  image: oxsecurity/megalinter:latest
+  environment:
+    DEFAULT_BRANCH: main
+    APPLY_FIXES: all
+    FILEIO_REPORTER: true
+    PARALLEL: true
+  volumes:
+  - name: workspace
+    path: /tmp/lint
+
+volumes:
+- name: workspace
+  temp: {}
+
+trigger:
+  branch:
+  - main
+  - develop
+  event:
+  - push
+  - pull_request
+
+---
+# === TeamCity Configuration ===
+# File: .teamcity/settings.kts (Kotlin DSL)
+import jetbrains.buildServer.configs.kotlin.v2019_2.*
+import jetbrains.buildServer.configs.kotlin.v2019_2.buildSteps.dockerCommand
+
+version = "2019.2"
+
+project {
+    buildType {
+        id("MegaLinter")
+        name = "MegaLinter"
+        
+        vcs {
+            root(DslContext.settingsRoot)
+        }
+        
+        steps {
+            dockerCommand {
+                name = "Run MegaLinter"
+                commandType = run {
+                    image = "oxsecurity/megalinter:latest"
+                    volumes = listOf("%teamcity.build.workingDir%:/tmp/lint")
+                    envVars = """
+                        DEFAULT_BRANCH=main
+                        APPLY_FIXES=all
+                        FILEIO_REPORTER=true
+                        BUILD_NUMBER=%build.number%
+                    """.trimIndent()
+                }
+            }
+        }
+        
+        artifactRules = "megalinter-reports/** => megalinter-reports.zip"
+    }
+}
+
+---
+# === Docker Compose for Local CI Testing ===
+# File: docker-compose.ci.yml
+version: '3.8'
+
+services:
+  megalinter:
+    image: oxsecurity/megalinter:latest
+    volumes:
+      - .:/tmp/lint
+      - ./reports:/tmp/lint/megalinter-reports
+    environment:
+      - DEFAULT_BRANCH=main
+      - APPLY_FIXES=all
+      - PARALLEL=true
+      - FILEIO_REPORTER=true
+      - SHOW_ELAPSED_TIME=true
+      - REPORTERS=console,json,html,sarif
+    networks:
+      - ci-network
+
+  megalinter-security:
+    image: oxsecurity/megalinter:latest
+    volumes:
+      - .:/tmp/lint
+      - ./security-reports:/tmp/lint/megalinter-reports
+    environment:
+      - DEFAULT_BRANCH=main
+      - ENABLE_LINTERS=REPOSITORY_TRUFFLEHOG,REPOSITORY_SEMGREP,PYTHON_BANDIT
+      - SARIF_REPORTER=true
+      - FILEIO_REPORTER=true
+    networks:
+      - ci-network
+
+  megalinter-js:
+    image: oxsecurity/megalinter-javascript:latest
+    volumes:
+      - .:/tmp/lint
+    environment:
+      - APPLY_FIXES=all
+      - JAVASCRIPT_ES_CONFIG_FILE=.eslintrc.json
+      - TYPESCRIPT_ES_CONFIG_FILE=.eslintrc.json
+    networks:
+      - ci-network
+
+networks:
+  ci-network:
+    driver: bridge
+
+---
+# === Multi-Stage Pipeline Example (Generic) ===
+# This can be adapted for any CI/CD platform
+
+# Stage 1: Fast Linting
+fast-lint:
+  image: oxsecurity/megalinter-javascript:latest
+  environment:
+    - ENABLE_LINTERS=JAVASCRIPT_ES,TYPESCRIPT_ES
+    - PARALLEL=true
+    - SHOW_ELAPSED_TIME=true
+  script:
+    - echo "Running fast linting..."
+
+# Stage 2: Security Scanning (depends on fast-lint)
+security-scan:
+  image: oxsecurity/megalinter:latest
+  environment:
+    - ENABLE_LINTERS=REPOSITORY_TRUFFLEHOG,REPOSITORY_SEMGREP
+    - SARIF_REPORTER=true
+  script:
+    - echo "Running security scan..."
+  depends_on:
+    - fast-lint
+
+# Stage 3: Full Analysis (depends on security-scan)
+full-analysis:
+  image: oxsecurity/megalinter:latest
+  environment:
+    - APPLY_FIXES=all
+    - REPORTERS=console,json,html
+    - FILEIO_REPORTER=true
+  script:
+    - echo "Running full analysis..."
+  depends_on:
+    - security-scan
+
+# Stage 4: Deploy Reports
+deploy-reports:
+  image: alpine:latest
+  script:
+    - echo "Deploying reports..."
+    - # Upload to artifact storage or GitHub Pages
+  depends_on:
+    - full-analysis
+
+---
+# === Conditional CI/CD Execution ===
+# Example for path-based execution
+
+# GitHub Actions Path Filtering
+path-filter-example:
+  if: contains(github.event.head_commit.modified, 'src/') || 
+      contains(github.event.head_commit.added, 'src/')
+  
+# GitLab CI Rules Example
+megalinter-conditional:
+  rules:
+    - changes:
+      - "src/**/*.js"
+      - "src/**/*.ts"
+      - "**/*.py"
+      - "**/Dockerfile"
+      when: always
+    - if: $CI_MERGE_REQUEST_ID
+      when: manual
+      allow_failure: true
+
+# Jenkins Pipeline Conditional Example
+when {
+    anyOf {
+        changeset "src/**"
+        changeset "**/*.py"
+        changeset "**/Dockerfile"
+    }
+}

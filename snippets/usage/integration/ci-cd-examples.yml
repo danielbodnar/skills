@@ -1,0 +1,532 @@
+# CI/CD Integration Examples for Usage CLI
+
+# GitHub Actions example
+name: CLI Build and Deploy
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Install Usage CLI
+        run: |
+          cargo install usage-cli
+          # Or use mise: mise use -g usage
+      
+      - name: Validate Usage specification
+        run: |
+          usage generate json -f ./cli.usage.kdl > /tmp/schema.json
+          echo "Usage specification is valid"
+      
+      - name: Generate completions and docs
+        run: |
+          mkdir -p dist/completions dist/docs
+          usage generate completion bash mycli -f ./cli.usage.kdl > dist/completions/mycli.bash
+          usage generate completion zsh mycli -f ./cli.usage.kdl > dist/completions/_mycli
+          usage generate completion fish mycli -f ./cli.usage.kdl > dist/completions/mycli.fish
+          usage generate markdown -f ./cli.usage.kdl > dist/docs/cli.md
+          usage generate manpage -f ./cli.usage.kdl > dist/docs/mycli.1
+      
+      - name: Build CLI binary
+        run: |
+          # For Rust project
+          cargo build --release
+          # For Bun/TypeScript project
+          # bun build src/cli.ts --outfile dist/mycli --target node
+      
+      - name: Test CLI functionality
+        run: |
+          # Test the built CLI
+          ./target/release/mycli --help
+          ./target/release/mycli --version
+          # Test with Usage-generated completion
+          source dist/completions/mycli.bash
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-artifacts
+          path: |
+            target/release/mycli
+            dist/completions/
+            dist/docs/
+
+  deploy:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-artifacts
+      
+      - name: Deploy to package registry
+        run: |
+          # Deploy to crates.io, npm, etc.
+          echo "Deploying CLI package..."
+      
+      - name: Update documentation
+        run: |
+          # Deploy documentation to GitHub Pages or docs site
+          echo "Updating documentation..."
+
+---
+
+# GitLab CI example
+stages:
+  - validate
+  - build
+  - test
+  - deploy
+
+variables:
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+
+cache:
+  key: $CI_COMMIT_REF_SLUG
+  paths:
+    - .cargo/
+    - target/
+
+validate_usage_spec:
+  stage: validate
+  image: rust:latest
+  script:
+    - cargo install usage-cli
+    - usage generate json -f ./cli.usage.kdl
+    - echo "Usage specification validated"
+
+build_cli:
+  stage: build
+  image: rust:latest
+  script:
+    - cargo build --release
+    - mkdir -p artifacts/bin artifacts/completions artifacts/docs
+    - cp target/release/mycli artifacts/bin/
+    # Generate completions and documentation
+    - usage generate completion bash mycli -f ./cli.usage.kdl > artifacts/completions/mycli.bash
+    - usage generate completion zsh mycli -f ./cli.usage.kdl > artifacts/completions/_mycli
+    - usage generate completion fish mycli -f ./cli.usage.kdl > artifacts/completions/mycli.fish
+    - usage generate markdown -f ./cli.usage.kdl > artifacts/docs/cli.md
+    - usage generate manpage -f ./cli.usage.kdl > artifacts/docs/mycli.1
+  artifacts:
+    paths:
+      - artifacts/
+    expire_in: 1 week
+
+test_cli:
+  stage: test
+  image: rust:latest
+  dependencies:
+    - build_cli
+  script:
+    - ./artifacts/bin/mycli --help
+    - ./artifacts/bin/mycli --version
+    # Test completion loading
+    - source artifacts/completions/mycli.bash
+    # Run CLI integration tests
+    - cargo test --release
+
+deploy_cli:
+  stage: deploy
+  image: rust:latest
+  dependencies:
+    - build_cli
+    - test_cli
+  script:
+    - echo "Deploying CLI to package registry..."
+    # Deploy to crates.io
+    - cargo publish --token $CRATES_IO_TOKEN
+  only:
+    - main
+
+---
+
+# Azure Pipelines example
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  CARGO_HOME: $(Pipeline.Workspace)/.cargo
+
+stages:
+- stage: Build
+  jobs:
+  - job: BuildCLI
+    steps:
+    - task: Cache@2
+      inputs:
+        key: 'cargo | "$(Agent.OS)" | Cargo.lock'
+        path: $(CARGO_HOME)
+        restoreKeys: |
+          cargo | "$(Agent.OS)"
+          cargo
+      displayName: 'Cache Cargo dependencies'
+    
+    - script: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source $HOME/.cargo/env
+        cargo install usage-cli
+      displayName: 'Install Rust and Usage CLI'
+    
+    - script: |
+        source $HOME/.cargo/env
+        usage generate json -f ./cli.usage.kdl
+      displayName: 'Validate Usage specification'
+    
+    - script: |
+        source $HOME/.cargo/env
+        cargo build --release
+      displayName: 'Build CLI'
+    
+    - script: |
+        source $HOME/.cargo/env
+        mkdir -p $(Build.ArtifactStagingDirectory)/completions
+        mkdir -p $(Build.ArtifactStagingDirectory)/docs
+        
+        usage generate completion bash mycli -f ./cli.usage.kdl > $(Build.ArtifactStagingDirectory)/completions/mycli.bash
+        usage generate completion zsh mycli -f ./cli.usage.kdl > $(Build.ArtifactStagingDirectory)/completions/_mycli
+        usage generate completion fish mycli -f ./cli.usage.kdl > $(Build.ArtifactStagingDirectory)/completions/mycli.fish
+        usage generate markdown -f ./cli.usage.kdl > $(Build.ArtifactStagingDirectory)/docs/cli.md
+        usage generate manpage -f ./cli.usage.kdl > $(Build.ArtifactStagingDirectory)/docs/mycli.1
+        
+        cp target/release/mycli $(Build.ArtifactStagingDirectory)/
+      displayName: 'Generate completions and documentation'
+    
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: 'cli-artifacts'
+
+- stage: Test
+  dependsOn: Build
+  jobs:
+  - job: TestCLI
+    steps:
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        artifactName: 'cli-artifacts'
+        downloadPath: $(System.ArtifactsDirectory)
+    
+    - script: |
+        chmod +x $(System.ArtifactsDirectory)/cli-artifacts/mycli
+        $(System.ArtifactsDirectory)/cli-artifacts/mycli --help
+        $(System.ArtifactsDirectory)/cli-artifacts/mycli --version
+      displayName: 'Test CLI functionality'
+
+- stage: Deploy
+  dependsOn: Test
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - job: DeployCLI
+    steps:
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        artifactName: 'cli-artifacts'
+        downloadPath: $(System.ArtifactsDirectory)
+    
+    - script: |
+        echo "Deploying CLI package..."
+        # Deploy to package registry
+      displayName: 'Deploy CLI'
+
+---
+
+# Jenkins Pipeline example
+pipeline {
+    agent any
+    
+    environment {
+        CARGO_HOME = "${WORKSPACE}/.cargo"
+        PATH = "${CARGO_HOME}/bin:${PATH}"
+    }
+    
+    stages {
+        stage('Setup') {
+            steps {
+                script {
+                    // Install Rust and Usage CLI
+                    sh '''
+                        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+                        source $HOME/.cargo/env
+                        cargo install usage-cli
+                    '''
+                }
+            }
+        }
+        
+        stage('Validate') {
+            steps {
+                script {
+                    // Validate Usage specification
+                    sh '''
+                        source $HOME/.cargo/env
+                        usage generate json -f ./cli.usage.kdl
+                        echo "Usage specification is valid"
+                    '''
+                }
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                script {
+                    // Build CLI
+                    sh '''
+                        source $HOME/.cargo/env
+                        cargo build --release
+                    '''
+                }
+            }
+        }
+        
+        stage('Generate Assets') {
+            steps {
+                script {
+                    // Generate completions and documentation
+                    sh '''
+                        source $HOME/.cargo/env
+                        mkdir -p dist/completions dist/docs
+                        
+                        usage generate completion bash mycli -f ./cli.usage.kdl > dist/completions/mycli.bash
+                        usage generate completion zsh mycli -f ./cli.usage.kdl > dist/completions/_mycli
+                        usage generate completion fish mycli -f ./cli.usage.kdl > dist/completions/mycli.fish
+                        usage generate markdown -f ./cli.usage.kdl > dist/docs/cli.md
+                        usage generate manpage -f ./cli.usage.kdl > dist/docs/mycli.1
+                        
+                        cp target/release/mycli dist/
+                    '''
+                }
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                script {
+                    // Test CLI functionality
+                    sh '''
+                        ./dist/mycli --help
+                        ./dist/mycli --version
+                        source dist/completions/mycli.bash
+                        
+                        # Run integration tests
+                        cargo test --release
+                    '''
+                }
+            }
+        }
+        
+        stage('Archive') {
+            steps {
+                archiveArtifacts artifacts: 'dist/**/*', fingerprint: true
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'dist/docs',
+                    reportFiles: 'cli.md',
+                    reportName: 'CLI Documentation'
+                ])
+            }
+        }
+        
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    // Deploy to package registry
+                    sh '''
+                        echo "Deploying CLI package..."
+                        # Add deployment commands here
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            emailext (
+                subject: "CLI Build Successful: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                body: "The CLI build and deployment completed successfully.",
+                to: "${env.CHANGE_AUTHOR_EMAIL}"
+            )
+        }
+        failure {
+            emailext (
+                subject: "CLI Build Failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                body: "The CLI build failed. Please check the logs.",
+                to: "${env.CHANGE_AUTHOR_EMAIL}"
+            )
+        }
+    }
+}
+
+---
+
+# Docker build example for CLI
+# Dockerfile.cli
+FROM rust:1.70 as builder
+
+# Install Usage CLI
+RUN cargo install usage-cli
+
+WORKDIR /app
+COPY . .
+
+# Validate Usage specification
+RUN usage generate json -f ./cli.usage.kdl
+
+# Build the CLI
+RUN cargo build --release
+
+# Generate completions and documentation
+RUN mkdir -p /app/dist/completions /app/dist/docs && \
+    usage generate completion bash mycli -f ./cli.usage.kdl > /app/dist/completions/mycli.bash && \
+    usage generate completion zsh mycli -f ./cli.usage.kdl > /app/dist/completions/_mycli && \
+    usage generate completion fish mycli -f ./cli.usage.kdl > /app/dist/completions/mycli.fish && \
+    usage generate markdown -f ./cli.usage.kdl > /app/dist/docs/cli.md && \
+    usage generate manpage -f ./cli.usage.kdl > /app/dist/docs/mycli.1
+
+# Runtime image
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/target/release/mycli /usr/local/bin/mycli
+COPY --from=builder /app/dist/completions/* /usr/share/bash-completion/completions/
+COPY --from=builder /app/dist/docs/mycli.1 /usr/share/man/man1/
+
+# Make CLI available
+RUN chmod +x /usr/local/bin/mycli
+
+# Test the CLI
+RUN mycli --version
+
+ENTRYPOINT ["mycli"]
+CMD ["--help"]
+
+---
+
+# Package.json scripts for Node.js CLI
+{
+  "name": "mycli",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "bun build src/cli.ts --outfile dist/mycli --target node",
+    "build:completions": "usage generate completion bash mycli -f ./cli.usage.kdl > dist/completions/mycli.bash && usage generate completion zsh mycli -f ./cli.usage.kdl > dist/completions/_mycli && usage generate completion fish mycli -f ./cli.usage.kdl > dist/completions/mycli.fish",
+    "build:docs": "usage generate markdown -f ./cli.usage.kdl > docs/cli.md && usage generate manpage -f ./cli.usage.kdl > docs/mycli.1",
+    "validate": "usage generate json -f ./cli.usage.kdl > /tmp/schema.json",
+    "test": "bun test",
+    "prepack": "npm run validate && npm run build && npm run build:completions && npm run build:docs",
+    "postinstall": "node scripts/install-completions.js"
+  },
+  "bin": {
+    "mycli": "./dist/mycli"
+  },
+  "files": [
+    "dist/",
+    "docs/",
+    "completions/",
+    "scripts/"
+  ]
+}
+
+---
+
+# Makefile for CLI project
+.PHONY: build test clean install completions docs validate
+
+# Default target
+all: validate build completions docs
+
+# Install dependencies
+install:
+	cargo install usage-cli
+	# or: mise use -g usage
+
+# Validate Usage specification
+validate:
+	usage generate json -f ./cli.usage.kdl > /tmp/schema.json
+	@echo "✅ Usage specification is valid"
+
+# Build the CLI
+build: validate
+	cargo build --release
+	@echo "✅ CLI built successfully"
+
+# Generate shell completions
+completions: build
+	@mkdir -p dist/completions
+	usage generate completion bash mycli -f ./cli.usage.kdl > dist/completions/mycli.bash
+	usage generate completion zsh mycli -f ./cli.usage.kdl > dist/completions/_mycli
+	usage generate completion fish mycli -f ./cli.usage.kdl > dist/completions/mycli.fish
+	usage generate fig -f ./cli.usage.kdl > dist/completions/mycli.fig.ts
+	@echo "✅ Shell completions generated"
+
+# Generate documentation
+docs: build
+	@mkdir -p dist/docs
+	usage generate markdown -f ./cli.usage.kdl > dist/docs/cli.md
+	usage generate manpage -f ./cli.usage.kdl > dist/docs/mycli.1
+	@echo "✅ Documentation generated"
+
+# Run tests
+test: build
+	cargo test --release
+	./target/release/mycli --help > /dev/null
+	./target/release/mycli --version > /dev/null
+	@echo "✅ Tests passed"
+
+# Install CLI system-wide
+install-cli: build completions docs
+	sudo cp target/release/mycli /usr/local/bin/
+	sudo cp dist/completions/mycli.bash /etc/bash_completion.d/
+	sudo cp dist/completions/_mycli /usr/local/share/zsh/site-functions/
+	sudo cp dist/docs/mycli.1 /usr/share/man/man1/
+	@echo "✅ CLI installed system-wide"
+
+# Clean build artifacts
+clean:
+	cargo clean
+	rm -rf dist/
+	@echo "✅ Build artifacts cleaned"
+
+# Package for distribution
+package: test completions docs
+	@mkdir -p dist/package
+	cp target/release/mycli dist/package/
+	cp -r dist/completions dist/package/
+	cp -r dist/docs dist/package/
+	tar -czf dist/mycli-$(shell cargo read-manifest | jq -r .version)-$(shell uname -m).tar.gz -C dist/package .
+	@echo "✅ Package created: dist/mycli-$(shell cargo read-manifest | jq -r .version)-$(shell uname -m).tar.gz"
+
+# Development workflow
+dev: validate
+	cargo run -- --help

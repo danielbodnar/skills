@@ -1,0 +1,88 @@
+---
+# netboot.xyz Ansible deployment playbook
+- hosts: all
+  become: yes
+  vars:
+    # Installation directory
+    netbootxyz_root: /var/www/html
+    netbootxyz_conf_dir: /etc/netbootxyz
+    
+    # Custom menu configuration
+    custom_generate_menus: true
+    custom_templates_dir: "{{ netbootxyz_conf_dir }}/custom"
+    
+    # Mirror configuration
+    netbootxyz_bootloader_http_endpoint: https://boot.netboot.xyz
+    
+    # Web server configuration
+    web_server: apache2  # or nginx
+    
+  tasks:
+    - name: Install required packages (Debian/Ubuntu)
+      apt:
+        name:
+          - ansible
+          - git
+          - apache2
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+    
+    - name: Install required packages (RHEL/CentOS/Fedora)
+      dnf:
+        name:
+          - ansible
+          - git
+          - httpd
+        state: present
+      when: ansible_os_family == "RedHat"
+    
+    - name: Clone netboot.xyz repository
+      git:
+        repo: https://github.com/netbootxyz/netboot.xyz.git
+        dest: /opt/netboot.xyz
+        force: yes
+    
+    - name: Create configuration directory
+      file:
+        path: "{{ netbootxyz_conf_dir }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Create custom menu directory
+      file:
+        path: "{{ custom_templates_dir }}"
+        state: directory
+        mode: '0755'
+      when: custom_generate_menus
+    
+    - name: Copy sample custom menu
+      copy:
+        src: /opt/netboot.xyz/etc/netbootxyz/custom/
+        dest: "{{ custom_templates_dir }}/"
+        remote_src: yes
+      when: custom_generate_menus
+    
+    - name: Generate user overrides configuration
+      template:
+        src: user_overrides.yml.j2
+        dest: /opt/netboot.xyz/user_overrides.yml
+    
+    - name: Run netboot.xyz build
+      shell: ansible-playbook -i inventory site.yml
+      args:
+        chdir: /opt/netboot.xyz
+    
+    - name: Start and enable web server (Apache)
+      systemd:
+        name: apache2
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian" and web_server == "apache2"
+    
+    - name: Start and enable web server (httpd)
+      systemd:
+        name: httpd
+        state: started
+        enabled: yes
+      when: ansible_os_family == "RedHat" and web_server == "apache2"

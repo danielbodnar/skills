@@ -1,0 +1,23 @@
+# systemd-networkd VETH Pair Configuration
+# File: /etc/systemd/network/25-veth0.netdev
+[NetDev]
+Name=veth0
+Kind=veth
+
+[Peer]
+Name=veth1
+
+# File: /etc/systemd/network/25-veth0.network
+[Match]
+Name=veth0
+
+[Network]
+Address=192.168.100.1/24
+IPForward=yes
+
+# File: /etc/systemd/network/25-veth1.network
+[Match]
+Name=veth1
+
+[Network]
+Address=192.168.100.2/24

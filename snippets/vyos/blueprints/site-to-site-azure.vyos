@@ -1,0 +1,245 @@
+# VyOS Site-to-Site VPN to Azure Configuration Blueprint
+# Route-based VPN with BGP over IKEv2/IPsec
+
+# VyOS On-Premises Router Configuration
+configure
+
+# System configuration
+set system host-name 'vyos-onprem'
+set system domain-name 'onprem.local'
+
+# Interface configuration
+set interfaces ethernet eth0 address '192.168.1.1/24'
+set interfaces ethernet eth0 description 'LAN Interface'
+set interfaces ethernet eth1 address '203.0.113.10/30'
+set interfaces ethernet eth1 description 'Internet Interface'
+
+# DNS and NTP
+set system name-server '8.8.8.8'
+set system name-server '8.8.4.4'
+set system ntp server '0.pool.ntp.org'
+set system ntp server '1.pool.ntp.org'
+
+# ================================================================
+# IPsec Configuration for Azure VPN Gateway
+# ================================================================
+
+# IKE group configuration (Azure requirements)
+set vpn ipsec ike-group AZURE-IKE dead-peer-detection action 'restart'
+set vpn ipsec ike-group AZURE-IKE dead-peer-detection interval '30'
+set vpn ipsec ike-group AZURE-IKE dead-peer-detection timeout '120'
+set vpn ipsec ike-group AZURE-IKE lifetime '28800'
+set vpn ipsec ike-group AZURE-IKE proposal 1 dh-group '14'
+set vpn ipsec ike-group AZURE-IKE proposal 1 encryption 'aes256'
+set vpn ipsec ike-group AZURE-IKE proposal 1 hash 'sha256'
+
+# ESP group configuration (Azure requirements)
+set vpn ipsec esp-group AZURE-ESP compression 'disable'
+set vpn ipsec esp-group AZURE-ESP lifetime '3600'
+set vpn ipsec esp-group AZURE-ESP mode 'tunnel'
+set vpn ipsec esp-group AZURE-ESP pfs 'dh-group14'
+set vpn ipsec esp-group AZURE-ESP proposal 1 encryption 'aes256'
+set vpn ipsec esp-group AZURE-ESP proposal 1 hash 'sha256'
+
+# Site-to-site peer configuration
+# Replace with your Azure VPN Gateway public IP
+set vpn ipsec site-to-site peer 52.1.2.3 authentication mode 'pre-shared-secret'
+set vpn ipsec site-to-site peer 52.1.2.3 authentication pre-shared-secret 'AzureVPNSharedKey123!'
+set vpn ipsec site-to-site peer 52.1.2.3 connection-type 'respond'
+set vpn ipsec site-to-site peer 52.1.2.3 description 'Azure VPN Gateway'
+set vpn ipsec site-to-site peer 52.1.2.3 ike-group 'AZURE-IKE'
+set vpn ipsec site-to-site peer 52.1.2.3 ikev2-reauth 'inherit'
+set vpn ipsec site-to-site peer 52.1.2.3 local-address '203.0.113.10'
+
+# VTI (Virtual Tunnel Interface) configuration for route-based VPN
+set vpn ipsec site-to-site peer 52.1.2.3 vti bind 'vti1'
+set vpn ipsec site-to-site peer 52.1.2.3 vti esp-group 'AZURE-ESP'
+
+# Configure VTI interface
+set interfaces vti vti1 address '169.254.21.1/30'
+set interfaces vti vti1 description 'Azure VPN Tunnel'
+set interfaces vti vti1 mtu '1436'
+
+# ================================================================
+# BGP Configuration for Route Exchange with Azure
+# ================================================================
+
+# BGP configuration
+set protocols bgp system-as '65001'
+set protocols bgp router-id '169.254.21.1'
+set protocols bgp parameters router-id '169.254.21.1'
+
+# BGP neighbor (Azure VPN Gateway BGP peer)
+set protocols bgp neighbor 169.254.21.2 remote-as '65515'
+set protocols bgp neighbor 169.254.21.2 description 'Azure VPN Gateway BGP'
+set protocols bgp neighbor 169.254.21.2 ebgp-multihop '2'
+set protocols bgp neighbor 169.254.21.2 update-source '169.254.21.1'
+set protocols bgp neighbor 169.254.21.2 address-family ipv4-unicast soft-reconfiguration inbound
+
+# Advertise local networks to Azure
+set protocols bgp address-family ipv4-unicast network '192.168.1.0/24'
+set protocols bgp address-family ipv4-unicast network '192.168.0.0/16'
+
+# Route filtering (optional)
+set policy prefix-list AZURE-IN rule 10 action 'permit'
+set policy prefix-list AZURE-IN rule 10 prefix '10.0.0.0/8'
+set policy prefix-list AZURE-IN rule 20 action 'permit'
+set policy prefix-list AZURE-IN rule 20 prefix '172.16.0.0/12'
+
+set policy route-map AZURE-IN rule 10 action 'permit'
+set policy route-map AZURE-IN rule 10 match ip address prefix-list 'AZURE-IN'
+
+set protocols bgp neighbor 169.254.21.2 address-family ipv4-unicast route-map import 'AZURE-IN'
+
+# ================================================================
+# Firewall Configuration
+# ================================================================
+
+# Firewall rules for VPN traffic
+set firewall name OUTSIDE-IN default-action 'drop'
+set firewall name OUTSIDE-IN rule 10 action 'accept'
+set firewall name OUTSIDE-IN rule 10 state established 'enable'
+set firewall name OUTSIDE-IN rule 10 state related 'enable'
+
+# Allow IKE
+set firewall name OUTSIDE-IN rule 20 action 'accept'
+set firewall name OUTSIDE-IN rule 20 destination port '500'
+set firewall name OUTSIDE-IN rule 20 protocol 'udp'
+set firewall name OUTSIDE-IN rule 20 source address '52.1.2.3'
+
+# Allow NAT-T
+set firewall name OUTSIDE-IN rule 30 action 'accept'
+set firewall name OUTSIDE-IN rule 30 destination port '4500'
+set firewall name OUTSIDE-IN rule 30 protocol 'udp'
+set firewall name OUTSIDE-IN rule 30 source address '52.1.2.3'
+
+# Allow ESP
+set firewall name OUTSIDE-IN rule 40 action 'accept'
+set firewall name OUTSIDE-IN rule 40 protocol 'esp'
+set firewall name OUTSIDE-IN rule 40 source address '52.1.2.3'
+
+# Allow BGP from Azure
+set firewall name OUTSIDE-IN rule 50 action 'accept'
+set firewall name OUTSIDE-IN rule 50 destination port '179'
+set firewall name OUTSIDE-IN rule 50 protocol 'tcp'
+set firewall name OUTSIDE-IN rule 50 source address '169.254.21.2'
+
+# Apply firewall to external interface
+set interfaces ethernet eth1 firewall in name 'OUTSIDE-IN'
+
+# ================================================================
+# NAT Configuration for Local Network
+# ================================================================
+
+# Source NAT for local network internet access
+set nat source rule 100 outbound-interface 'eth1'
+set nat source rule 100 source address '192.168.0.0/16'
+set nat source rule 100 translation address 'masquerade'
+
+# Exclude VPN traffic from NAT
+set nat source rule 90 destination address '10.0.0.0/8'
+set nat source rule 90 exclude
+set nat source rule 90 outbound-interface 'eth1'
+set nat source rule 90 source address '192.168.0.0/16'
+
+# ================================================================
+# Local Network Services
+# ================================================================
+
+# DHCP server for local network
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 default-router '192.168.1.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 dns-server '192.168.1.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 domain-name 'onprem.local'
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 range 0 start '192.168.1.100'
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 range 0 stop '192.168.1.200'
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 lease '86400'
+
+# DNS forwarding
+set service dns forwarding listen-address '192.168.1.1'
+set service dns forwarding allow-from '192.168.1.0/24'
+set service dns forwarding name-server '8.8.8.8'
+set service dns forwarding name-server '8.8.4.4'
+
+# ================================================================
+# Monitoring and Logging
+# ================================================================
+
+# IPsec logging
+set vpn ipsec logging log-level '2'
+set vpn ipsec logging log-modes 'all'
+
+# BGP logging
+set protocols bgp parameters log-neighbor-changes
+
+# System logging
+set system syslog global facility all level 'info'
+set system syslog global facility protocols level 'debug'
+
+commit
+save
+exit
+
+# ================================================================
+# Verification and Troubleshooting Commands
+# ================================================================
+
+# Check IPsec status
+show vpn ipsec sa
+show vpn ipsec status
+
+# Check tunnel interface
+show interfaces vti
+
+# Check BGP status
+show protocols bgp summary
+show protocols bgp neighbors
+show ip route bgp
+
+# Check routes from Azure
+show ip route | grep bgp
+
+# Test connectivity to Azure resources
+ping 10.0.1.10 source-address 192.168.1.1
+
+# Debug commands
+debug vpn ipsec
+debug bgp events
+debug bgp updates
+
+# Show IPsec logs
+show log | match ipsec
+
+# Show BGP logs  
+show log | match bgp
+
+# Reset BGP session (if needed)
+reset protocols bgp 169.254.21.2
+
+# Reset IPsec connection (if needed)
+reset vpn ipsec-peer 52.1.2.3
+
+# ================================================================
+# Redundant Configuration (Second Azure Gateway)
+# ================================================================
+
+# For Azure redundant VPN setup, add second peer:
+# set vpn ipsec site-to-site peer 52.1.2.4 authentication mode 'pre-shared-secret'
+# set vpn ipsec site-to-site peer 52.1.2.4 authentication pre-shared-secret 'AzureVPNSharedKey456!'
+# set vpn ipsec site-to-site peer 52.1.2.4 connection-type 'respond'
+# set vpn ipsec site-to-site peer 52.1.2.4 description 'Azure VPN Gateway Secondary'
+# set vpn ipsec site-to-site peer 52.1.2.4 ike-group 'AZURE-IKE'
+# set vpn ipsec site-to-site peer 52.1.2.4 local-address '203.0.113.10'
+# set vpn ipsec site-to-site peer 52.1.2.4 vti bind 'vti2'
+# set vpn ipsec site-to-site peer 52.1.2.4 vti esp-group 'AZURE-ESP'
+
+# Configure second VTI
+# set interfaces vti vti2 address '169.254.22.1/30'
+# set interfaces vti vti2 description 'Azure VPN Tunnel Secondary'
+# set interfaces vti vti2 mtu '1436'
+
+# Add second BGP neighbor
+# set protocols bgp neighbor 169.254.22.2 remote-as '65515'
+# set protocols bgp neighbor 169.254.22.2 description 'Azure VPN Gateway BGP Secondary'
+# set protocols bgp neighbor 169.254.22.2 ebgp-multihop '2'
+# set protocols bgp neighbor 169.254.22.2 update-source '169.254.22.1'
+# set protocols bgp neighbor 169.254.22.2 address-family ipv4-unicast soft-reconfiguration inbound

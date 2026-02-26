@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bootc.dev/schemas/containerfile-v1.json",
+  "title": "bootc Containerfile Schema",
+  "description": "Schema for bootc-compatible Containerfile structure and best practices",
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "object",
+      "properties": {
+        "baseImage": {
+          "type": "string",
+          "pattern": "^(quay\\.io/(fedora/fedora-bootc|centos-bootc/centos-bootc|rhel9/rhel-bootc)|registry\\.redhat\\.io/rhel9/rhel-bootc)",
+          "description": "bootc-compatible base image"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Image tag or version"
+        }
+      },
+      "required": ["baseImage"]
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "containers.bootc": {
+          "type": "string",
+          "const": "1",
+          "description": "Required label to indicate bootc compatibility"
+        },
+        "org.opencontainers.image.version": {
+          "type": "string",
+          "description": "Image version label"
+        },
+        "org.opencontainers.image.title": {
+          "type": "string",
+          "description": "Human-readable title"
+        },
+        "org.opencontainers.image.description": {
+          "type": "string",
+          "description": "Image description"
+        }
+      },
+      "required": ["containers.bootc"]
+    },
+    "run_commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "RUN command to execute"
+          },
+          "best_practices": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "combine_with_cleanup",
+                "use_package_manager_clean",
+                "remove_temp_files",
+                "minimize_layers",
+                "validate_with_lint"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "copy_operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Source path or file"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Destination path in container"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["config", "application", "script", "service"]
+          }
+        }
+      }
+    },
+    "systemd_services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+\\.(service|timer|socket)$",
+            "description": "systemd unit name"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether service should be enabled"
+          },
+          "path": {
+            "type": "string",
+            "description": "Path to service file"
+          }
+        }
+      }
+    },
+    "users_and_groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "User or group name"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["user", "group"]
+          },
+          "uid": {
+            "type": "integer",
+            "minimum": 1000,
+            "description": "User ID (recommended > 1000 for non-system users)"
+          },
+          "gid": {
+            "type": "integer",
+            "minimum": 1000,
+            "description": "Group ID"
+          },
+          "system": {
+            "type": "boolean",
+            "description": "Whether this is a system user/group"
+          }
+        }
+      }
+    },
+    "lint_checks": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to run bootc container lint"
+        },
+        "fatal_warnings": {
+          "type": "boolean",
+          "default": false,
+          "description": "Treat lint warnings as errors"
+        },
+        "skip_checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Lint checks to skip"
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "selinux": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "contexts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "context": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "file_permissions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "pattern": "^[0-7]{3,4}$"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "group": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "properties": {
+        "required_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Files that must exist in the final image"
+        },
+        "prohibited_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Files that must not exist in the final image"
+        },
+        "service_checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Services that must be enabled"
+        }
+      }
+    }
+  },
+  "required": ["from", "labels"]
+}

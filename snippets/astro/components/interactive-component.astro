@@ -1,0 +1,139 @@
+---
+// Component with client-side interactivity
+export interface Props {
+  count?: number;
+  label?: string;
+}
+
+const { count = 0, label = "Count" } = Astro.props;
+---
+
+<div class="counter">
+  <h3>{label}</h3>
+  <div class="counter-display">
+    <span id="count-value">{count}</span>
+  </div>
+  <div class="counter-controls">
+    <button id="decrement">-</button>
+    <button id="reset">Reset</button>
+    <button id="increment">+</button>
+  </div>
+</div>
+
+<script>
+  // Client-side JavaScript (runs in browser)
+  class Counter {
+    private count: number;
+    private countElement: HTMLElement;
+    
+    constructor(initialCount: number = 0) {
+      this.count = initialCount;
+      this.countElement = document.getElementById('count-value')!;
+      this.init();
+    }
+    
+    private init() {
+      const incrementBtn = document.getElementById('increment');
+      const decrementBtn = document.getElementById('decrement');
+      const resetBtn = document.getElementById('reset');
+      
+      incrementBtn?.addEventListener('click', () => this.increment());
+      decrementBtn?.addEventListener('click', () => this.decrement());
+      resetBtn?.addEventListener('click', () => this.reset());
+    }
+    
+    private increment() {
+      this.count++;
+      this.updateDisplay();
+    }
+    
+    private decrement() {
+      this.count--;
+      this.updateDisplay();
+    }
+    
+    private reset() {
+      this.count = 0;
+      this.updateDisplay();
+    }
+    
+    private updateDisplay() {
+      this.countElement.textContent = this.count.toString();
+    }
+  }
+  
+  // Initialize counter when DOM is loaded
+  document.addEventListener('DOMContentLoaded', () => {
+    const initialCount = parseInt(
+      document.getElementById('count-value')?.textContent || '0'
+    );
+    new Counter(initialCount);
+  });
+</script>
+
+<style>
+  .counter {
+    max-width: 300px;
+    padding: 1.5rem;
+    border: 2px solid #667eea;
+    border-radius: 12px;
+    text-align: center;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .counter h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+  }
+  
+  .counter-display {
+    margin: 1rem 0;
+  }
+  
+  #count-value {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #667eea;
+    display: inline-block;
+    min-width: 80px;
+  }
+  
+  .counter-controls {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+  
+  button {
+    padding: 0.5rem 1rem;
+    border: 2px solid #667eea;
+    background: #667eea;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    min-width: 60px;
+    transition: all 0.2s ease;
+  }
+  
+  button:hover {
+    background: #5a67d8;
+    border-color: #5a67d8;
+    transform: translateY(-1px);
+  }
+  
+  button:active {
+    transform: translateY(0);
+  }
+  
+  #reset {
+    background: #e53e3e;
+    border-color: #e53e3e;
+  }
+  
+  #reset:hover {
+    background: #c53030;
+    border-color: #c53030;
+  }
+</style>

@@ -1,0 +1,175 @@
+# GitHub Actions Expressions and Contexts
+# Demonstrates various expressions, functions, and context usage
+
+name: Expressions and Contexts
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 9 * * 1'
+
+env:
+  GLOBAL_VAR: 'global-value'
+  NODE_VERSION: '20'
+
+jobs:
+  expressions-demo:
+    runs-on: ubuntu-latest
+    
+    env:
+      JOB_VAR: 'job-value'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Context examples
+    - name: GitHub context
+      run: |
+        echo "Repository: ${{ github.repository }}"
+        echo "Actor: ${{ github.actor }}"
+        echo "Event: ${{ github.event_name }}"
+        echo "Ref: ${{ github.ref }}"
+        echo "SHA: ${{ github.sha }}"
+        echo "Run ID: ${{ github.run_id }}"
+        echo "Run Number: ${{ github.run_number }}"
+        echo "Workflow: ${{ github.workflow }}"
+
+    # Runner context
+    - name: Runner context
+      run: |
+        echo "OS: ${{ runner.os }}"
+        echo "Arch: ${{ runner.arch }}"
+        echo "Name: ${{ runner.name }}"
+        echo "Tool Cache: ${{ runner.tool_cache }}"
+        echo "Temp: ${{ runner.temp }}"
+        echo "Workspace: ${{ runner.workspace }}"
+
+    # Environment variables
+    - name: Environment variables
+      env:
+        STEP_VAR: 'step-value'
+      run: |
+        echo "Global: ${{ env.GLOBAL_VAR }}"
+        echo "Job: ${{ env.JOB_VAR }}"
+        echo "Step: $STEP_VAR"
+        echo "Node version: ${{ env.NODE_VERSION }}"
+
+    # Secrets (don't echo actual values)
+    - name: Using secrets
+      env:
+        SECRET_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "Secret is available: ${{ secrets.GITHUB_TOKEN != '' }}"
+        # Never echo actual secret values
+        echo "Token length: ${#SECRET_TOKEN}"
+
+    # String functions
+    - name: String functions
+      run: |
+        echo "Contains main: ${{ contains(github.ref, 'main') }}"
+        echo "Starts with refs: ${{ startsWith(github.ref, 'refs/') }}"
+        echo "Ends with main: ${{ endsWith(github.ref, 'main') }}"
+        echo "Format example: ${{ format('Hello {0}!', github.actor) }}"
+
+    # Conditional expressions
+    - name: Conditional expressions
+      run: |
+        echo "Is push event: ${{ github.event_name == 'push' }}"
+        echo "Is main branch: ${{ github.ref == 'refs/heads/main' }}"
+        echo "Is PR: ${{ github.event_name == 'pull_request' }}"
+
+    # Hash functions
+    - name: Hash functions
+      run: |
+        echo "Package.json hash: ${{ hashFiles('**/package.json') }}"
+        echo "All lock files hash: ${{ hashFiles('**/package-lock.json', '**/yarn.lock', '**/bun.lockb') }}"
+
+    # JSON functions
+    - name: JSON functions
+      run: |
+        echo "JSON example: ${{ toJSON(github.event) }}" | head -20
+        echo "From JSON: ${{ fromJSON('{"name": "value"}').name }}"
+
+    # Type conversion
+    - name: Type conversion
+      run: |
+        echo "Number: ${{ toNumber('42') }}"
+        echo "String: ${{ toString(42) }}"
+
+  conditional-steps:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Success/failure conditions
+    - name: Always run
+      if: always()
+      run: echo "This always runs"
+
+    - name: Run on success
+      if: success()
+      run: echo "Previous steps succeeded"
+
+    - name: Run on failure
+      if: failure()
+      run: echo "Previous steps failed"
+
+    - name: Run if cancelled
+      if: cancelled()
+      run: echo "Workflow was cancelled"
+
+    # Complex conditions
+    - name: Complex condition
+      if: |
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/main' &&
+        !contains(github.event.head_commit.message, '[skip ci]')
+      run: echo "Complex condition met"
+
+    # Matrix conditions
+    - name: Matrix-based condition
+      if: matrix.os == 'ubuntu-latest'
+      run: echo "Running on Ubuntu"
+
+  status-functions:
+    runs-on: ubuntu-latest
+    needs: expressions-demo
+    
+    steps:
+    - name: Check job status
+      run: |
+        echo "Expressions demo status: ${{ needs.expressions-demo.result }}"
+        echo "Job successful: ${{ needs.expressions-demo.result == 'success' }}"
+
+    # Using step outputs
+    - name: Create output
+      id: output-step
+      run: |
+        echo "value=hello-world" >> $GITHUB_OUTPUT
+        echo "timestamp=$(date +%s)" >> $GITHUB_OUTPUT
+
+    - name: Use step output
+      run: |
+        echo "Output value: ${{ steps.output-step.outputs.value }}"
+        echo "Timestamp: ${{ steps.output-step.outputs.timestamp }}"
+
+  # Default values and fallbacks
+  default-values:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Default values
+      env:
+        # Use input or default value
+        NODE_VER: ${{ github.event.inputs.node_version || '20' }}
+        # Use secret or default
+        API_URL: ${{ secrets.API_URL || 'https://api.example.com' }}
+      run: |
+        echo "Node version: $NODE_VER"
+        echo "API URL configured: ${{ env.API_URL != '' }}"

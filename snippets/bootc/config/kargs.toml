@@ -1,0 +1,24 @@
+# Kernel Arguments Configuration
+# Place files like this in /usr/lib/bootc/kargs.d/ in your container image
+
+# Generic kernel arguments applied to all architectures
+kargs = [
+    "mitigations=auto,nosmt",
+    "systemd.unified_cgroup_hierarchy=1",
+    "audit=1",
+    "audit_backlog_limit=8192"
+]
+
+# Architecture-specific configurations can be in separate files:
+
+# For x86_64 systems (save as x86_64.toml)
+# kargs = ["console=ttyS0,115200n8", "intel_iommu=on"]
+# match-architectures = ["x86_64"]
+
+# For ARM64 systems (save as aarch64.toml)  
+# kargs = ["console=ttyAMA0,115200"]
+# match-architectures = ["aarch64"]
+
+# For specific hardware configurations (save as hardware-specific.toml)
+# kargs = ["nouveau.modeset=0", "nvidia-drm.modeset=1"]
+# match-architectures = ["x86_64"]

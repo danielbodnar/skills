@@ -1,0 +1,10 @@
+{
+  "name": "project-scaffold",
+  "version": "1.0.0",
+  "description": "Mise, justfile, devcontainer, and project template skills for bootstrapping new projects.",
+  "author": {
+    "name": "Daniel Bodnar",
+    "email": "daniel.bodnar@gmail.com"
+  },
+  "keywords": ["mise", "justfile", "devcontainer", "scaffold", "template", "project-setup"]
+}

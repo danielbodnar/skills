@@ -1,0 +1,274 @@
+# Universal Blue - Justfile Examples
+# Collection of just recipes for Universal Blue image management
+
+# Default recipe - show available commands
+default:
+    @just --list
+
+# Variables
+image_name := "my-custom-image"
+image_tag := "latest"
+registry := "localhost"
+full_image := registry + "/" + image_name + ":" + image_tag
+
+# Build container image locally
+build:
+    podman build --tag {{full_image}} .
+
+# Build with specific tag
+build-tag tag:
+    podman build --tag {{registry}}/{{image_name}}:{{tag}} .
+
+# Build for multiple architectures
+build-multi:
+    podman build --platform linux/amd64,linux/arm64 --tag {{full_image}} .
+
+# Build and push to registry
+build-push registry_url:
+    podman build --tag {{registry_url}}/{{image_name}}:{{image_tag}} .
+    podman push {{registry_url}}/{{image_name}}:{{image_tag}}
+
+# Test the built image
+test:
+    podman run --rm -it {{full_image}} bash
+
+# Run image with host networking
+test-network:
+    podman run --rm -it --network host {{full_image}} bash
+
+# Build VM image using bootc-image-builder
+build-vm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p output
+    podman run --rm \
+        --privileged \
+        --pull=newer \
+        --security-opt label=type:unconfined_t \
+        -v $(pwd)/output:/output \
+        quay.io/centos-bootc/bootc-image-builder:latest \
+        --type qcow2 \
+        --local \
+        {{full_image}}
+
+# Build VM image with specific type
+build-vm-type type:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p output
+    podman run --rm \
+        --privileged \
+        --pull=newer \
+        --security-opt label=type:unconfined_t \
+        -v $(pwd)/output:/output \
+        quay.io/centos-bootc/bootc-image-builder:latest \
+        --type {{type}} \
+        --local \
+        {{full_image}}
+
+# Build ISO image
+build-iso:
+    @just build-vm-type iso
+
+# Build raw disk image
+build-raw:
+    @just build-vm-type raw
+
+# Build VMDK image for VMware
+build-vmdk:
+    @just build-vm-type vmdk
+
+# Run VM using QEMU
+run-vm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f output/disk.qcow2 ]; then
+        echo "VM image not found. Run 'just build-vm' first."
+        exit 1
+    fi
+    qemu-system-x86_64 \
+        -m 4G \
+        -smp 2 \
+        -enable-kvm \
+        -drive file=output/disk.qcow2,format=qcow2 \
+        -netdev user,id=net0 \
+        -device virtio-net-pci,netdev=net0 \
+        -display gtk
+
+# Run VM with more memory and CPUs
+run-vm-performance:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f output/disk.qcow2 ]; then
+        echo "VM image not found. Run 'just build-vm' first."
+        exit 1
+    fi
+    qemu-system-x86_64 \
+        -m 8G \
+        -smp 4 \
+        -enable-kvm \
+        -drive file=output/disk.qcow2,format=qcow2 \
+        -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+        -device virtio-net-pci,netdev=net0 \
+        -display gtk \
+        -vga virtio
+
+# Clean up build artifacts
+clean:
+    rm -rf output/
+    podman rmi {{full_image}} || true
+
+# Clean all related images
+clean-all:
+    podman rmi $(podman images {{registry}}/{{image_name}} -q) || true
+    rm -rf output/
+
+# Show image information
+info:
+    podman images {{registry}}/{{image_name}}
+    podman inspect {{full_image}} | jq '.[] | {Id, Created, Size}'
+
+# Show image layers
+layers:
+    podman history {{full_image}}
+
+# Lint Containerfile
+lint:
+    hadolint Containerfile
+
+# Format Containerfile
+format:
+    dockerfilelint Containerfile
+
+# Security scan
+scan:
+    trivy image {{full_image}}
+
+# Security scan with high and critical vulnerabilities only
+scan-critical:
+    trivy image --severity HIGH,CRITICAL {{full_image}}
+
+# Export image as tar archive
+export:
+    podman save {{full_image}} -o {{image_name}}-{{image_tag}}.tar
+
+# Import image from tar archive
+import:
+    podman load -i {{image_name}}-{{image_tag}}.tar
+
+# Tag image for different registry
+tag registry_url:
+    podman tag {{full_image}} {{registry_url}}/{{image_name}}:{{image_tag}}
+
+# Push to specific registry
+push registry_url:
+    podman push {{registry_url}}/{{image_name}}:{{image_tag}}
+
+# Pull base image
+pull-base:
+    podman pull ghcr.io/ublue-os/silverblue-main:latest
+
+# Update base image and rebuild
+update:
+    @just pull-base
+    @just build
+
+# Show container logs
+logs:
+    podman logs $(podman ps -a --filter ancestor={{full_image}} --format "{{.ID}}" | head -1)
+
+# Enter running container
+exec:
+    podman exec -it $(podman ps --filter ancestor={{full_image}} --format "{{.ID}}" | head -1) bash
+
+# Start container in background
+start:
+    podman run -d --name {{image_name}}-container {{full_image}}
+
+# Stop and remove container
+stop:
+    podman stop {{image_name}}-container || true
+    podman rm {{image_name}}-container || true
+
+# Restart container
+restart:
+    @just stop
+    @just start
+
+# Show resource usage
+stats:
+    podman stats $(podman ps --filter ancestor={{full_image}} --format "{{.Names}}")
+
+# Backup image
+backup:
+    mkdir -p backups/
+    podman save {{full_image}} | gzip > backups/{{image_name}}-{{image_tag}}-$(date +%Y%m%d-%H%M%S).tar.gz
+
+# Restore from backup
+restore backup_file:
+    gunzip -c {{backup_file}} | podman load
+
+# Generate systemd service
+generate-systemd:
+    podman generate systemd --new --name {{image_name}}-container > {{image_name}}.service
+
+# Development workflow - build and test
+dev:
+    @just build
+    @just test
+
+# CI workflow - build, scan, and push
+ci registry_url:
+    @just build
+    @just lint
+    @just scan
+    @just push {{registry_url}}
+
+# Complete workflow - build VM and test
+complete:
+    @just build
+    @just build-vm
+    @just run-vm
+
+# Validate BlueBuild recipes
+validate-recipes:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for recipe in recipes/*.yml recipes/*.yaml; do
+        if [ -f "$recipe" ]; then
+            echo "Validating $recipe"
+            bluebuild validate "$recipe"
+        fi
+    done
+
+# Build using BlueBuild
+bluebuild-build recipe:
+    bluebuild build {{recipe}}
+
+# Template a new recipe
+template-recipe name:
+    #!/usr/bin/env bash
+    cat > recipes/{{name}}.yml << 'EOF'
+    name: {{name}}
+    description: Custom Universal Blue image
+    base-image: ghcr.io/ublue-os/silverblue-main:latest
+    image-version: latest
+    
+    stages:
+      - type: rpm-ostree
+        install:
+          - git
+          - vim
+    EOF
+    echo "Created recipes/{{name}}.yml"
+
+# Show system information
+system-info:
+    echo "=== System Information ==="
+    rpm-ostree status
+    echo ""
+    echo "=== Container Images ==="
+    podman images
+    echo ""
+    echo "=== Running Containers ==="
+    podman ps

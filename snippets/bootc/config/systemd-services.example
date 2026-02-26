@@ -1,0 +1,149 @@
+# Example systemd service files for bootc containers
+
+# === Application Service ===
+# Save as: /etc/systemd/system/myapp.service
+
+[Unit]
+Description=My Application Service
+After=network-online.target
+Wants=network-online.target
+Requires=postgresql.service redis.service
+
+[Service]
+Type=exec
+User=myapp
+Group=myapp
+WorkingDirectory=/opt/myapp
+ExecStart=/opt/myapp/bin/myapp
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/myapp /var/lib/myapp
+
+[Install]
+WantedBy=multi-user.target
+
+# === Monitoring Service ===
+# Save as: /etc/systemd/system/app-monitor.service
+
+[Unit]
+Description=Application Health Monitor
+After=myapp.service
+Requires=myapp.service
+
+[Service]
+Type=simple
+User=monitor
+Group=monitor
+ExecStart=/usr/local/bin/health-monitor.sh
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+# === Timer for Maintenance ===
+# Save as: /etc/systemd/system/app-maintenance.timer
+
+[Unit]
+Description=Application Maintenance Timer
+Requires=app-maintenance.service
+
+[Timer]
+# Run daily at 2 AM
+OnCalendar=daily
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+# === Maintenance Service ===
+# Save as: /etc/systemd/system/app-maintenance.service
+
+[Unit]
+Description=Application Maintenance
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/maintenance.sh
+StandardOutput=journal
+StandardError=journal
+
+# === Container Application with Quadlet ===
+# Save as: /etc/containers/systemd/webapp.container
+
+[Unit]
+Description=Web Application Container
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=quay.io/myorg/webapp:latest
+Network=host
+Volume=/var/log/webapp:/var/log/webapp:Z
+Volume=/etc/webapp:/etc/webapp:ro,Z
+Environment=ENVIRONMENT=production
+Environment=LOG_LEVEL=info
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
+
+# === Container Image Reference ===
+# Save as: /etc/containers/systemd/webapp.image
+
+[Image]
+Image=quay.io/myorg/webapp:latest
+
+# === Auto-update Configuration ===
+# Disable default bootc auto-updates if using custom update management
+# Run: systemctl disable bootc-fetch-apply-updates.timer
+
+# Custom update service
+# Save as: /etc/systemd/system/custom-bootc-update.service
+
+[Unit]
+Description=Custom bootc Update Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/bootc upgrade --check
+ExecStart=/usr/bin/bootc upgrade
+ExecStartPost=/usr/local/bin/post-update-hook.sh
+StandardOutput=journal
+StandardError=journal
+
+# === Custom Update Timer ===
+# Save as: /etc/systemd/system/custom-bootc-update.timer
+
+[Unit]
+Description=Custom bootc Update Timer
+Requires=custom-bootc-update.service
+
+[Timer]
+# Check for updates weekly on Sundays at 3 AM
+OnCalendar=Sun *-*-* 03:00:00
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

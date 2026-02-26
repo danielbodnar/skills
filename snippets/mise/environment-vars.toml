@@ -1,0 +1,221 @@
+# Environment Variables Examples for mise.toml
+
+[env]
+# =============================================================================
+# BASIC ENVIRONMENT VARIABLES
+# =============================================================================
+
+# Simple string values
+NODE_ENV = "development"
+DEBUG = "true"
+LOG_LEVEL = "info"
+API_VERSION = "v1"
+
+# Numeric values (stored as strings)
+PORT = "3000"
+TIMEOUT = "30000"
+MAX_CONNECTIONS = "100"
+
+# =============================================================================
+# TEMPLATE VARIABLES
+# =============================================================================
+
+# Use current directory name as project name
+PROJECT_NAME = "{{ config_root | basename }}"
+
+# Get environment variables with defaults
+NODE_ENV_WITH_DEFAULT = "{{ env.NODE_ENV | default(value='development') }}"
+PORT_WITH_DEFAULT = "{{ env.PORT | default(value='3000') }}"
+
+# Use get_env function
+DATABASE_URL = "{{ get_env(name='DATABASE_URL', default='postgresql://localhost/mydb') }}"
+
+# Combine multiple variables
+API_URL = "https://{{ env.API_HOST | default(value='localhost') }}:{{ env.API_PORT | default(value='8080') }}/api/v1"
+
+# =============================================================================
+# PATH MODIFICATIONS
+# =============================================================================
+
+# Add directories to PATH
+_.path = [
+  "{{ config_root }}/bin",
+  "{{ config_root }}/node_modules/.bin",
+  "{{ config_root }}/scripts",
+]
+
+# Prepend to existing PATH
+_.path = ["{{ config_root }}/custom-tools", "{{ env.PATH }}"]
+
+# =============================================================================
+# LANGUAGE-SPECIFIC ENVIRONMENT
+# =============================================================================
+
+# Python virtual environment
+_.python.venv = ".venv"
+_.python.venv = { path = ".venv", create = true }
+_.python.venv = { path = ".venv", create = true, python = "3.11" }
+
+# Add Python packages to path
+PYTHONPATH = "{{ config_root }}/src"
+
+# Node.js specific
+NODE_OPTIONS = "--max-old-space-size=4096"
+NPM_CONFIG_PROGRESS = "false"
+
+# Java specific
+JAVA_OPTS = "-Xmx2g -Xms512m"
+MAVEN_OPTS = "-Xmx1g"
+
+# Go specific
+GOPATH = "{{ config_root }}/go"
+GOCACHE = "{{ config_root }}/.cache/go"
+
+# =============================================================================
+# DEVELOPMENT ENVIRONMENT
+# =============================================================================
+
+# Development flags
+DEVELOPMENT = "true"
+HOT_RELOAD = "true"
+SOURCEMAPS = "true"
+MINIFY = "false"
+
+# Debugging
+DEBUG_NAMESPACE = "app:*"
+VERBOSE = "true"
+TRACE = "false"
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+
+# Database connection
+DATABASE_URL = "postgresql://user:pass@localhost:5432/{{ config_root | basename }}_dev"
+REDIS_URL = "redis://localhost:6379"
+MONGODB_URL = "mongodb://localhost:27017/{{ config_root | basename }}"
+
+# Database settings
+DB_POOL_SIZE = "10"
+DB_TIMEOUT = "5000"
+DB_SSL = "false"
+
+# =============================================================================
+# API AND SERVICE CONFIGURATION
+# =============================================================================
+
+# API configuration
+API_BASE_URL = "https://api.example.com"
+API_TIMEOUT = "10000"
+API_RETRY_ATTEMPTS = "3"
+
+# Authentication
+JWT_SECRET = "{{ env.JWT_SECRET | default(value='dev-secret-key') }}"
+AUTH_PROVIDER = "local"
+
+# External services
+STRIPE_PUBLIC_KEY = "{{ env.STRIPE_PUBLIC_KEY }}"
+SENDGRID_API_KEY = "{{ env.SENDGRID_API_KEY }}"
+
+# =============================================================================
+# BUILD AND DEPLOYMENT
+# =============================================================================
+
+# Build configuration
+BUILD_TARGET = "es2022"
+BUILD_FORMAT = "esm"
+BUNDLE_ANALYZER = "false"
+
+# Deployment
+DEPLOY_ENV = "development"
+CDN_URL = "{{ env.CDN_URL | default(value='/static') }}"
+ASSET_PREFIX = "{{ env.ASSET_PREFIX | default(value='') }}"
+
+# =============================================================================
+# LAZY EVALUATION (tools=true)
+# =============================================================================
+
+# Variables that depend on tools being loaded
+JAVA_HOME = { value = "{{ env.JAVA_HOME }}", tools = true }
+GO_ROOT = { value = "{{ env.GOROOT }}", tools = true }
+
+# Path that includes tool paths
+FULL_PATH = { value = "{{ env.PATH }}", tools = true }
+
+# =============================================================================
+# CONDITIONAL VARIABLES
+# =============================================================================
+
+# Different values for different environments
+LOG_LEVEL_CONDITIONAL = "{{ env.NODE_ENV == 'production' and 'warn' or 'debug' }}"
+
+# Feature flags
+FEATURE_NEW_UI = "{{ env.FEATURE_NEW_UI | default(value='false') }}"
+EXPERIMENTAL_FEATURES = "{{ env.NODE_ENV == 'development' and 'true' or 'false' }}"
+
+# =============================================================================
+# SECRETS AND SENSITIVE DATA
+# =============================================================================
+
+# Reference encrypted files (requires mise secrets setup)
+SECRET_KEY = "{{ env.SECRET_KEY }}"
+DATABASE_PASSWORD = "{{ env.DATABASE_PASSWORD }}"
+
+# Use external secret management
+AWS_SECRET_ACCESS_KEY = "{{ env.AWS_SECRET_ACCESS_KEY }}"
+GITHUB_TOKEN = "{{ env.GITHUB_TOKEN }}"
+
+# =============================================================================
+# DOCKER AND CONTAINERIZATION
+# =============================================================================
+
+# Docker configuration
+DOCKER_REGISTRY = "registry.example.com"
+DOCKER_IMAGE_TAG = "{{ env.VERSION | default(value='latest') }}"
+DOCKER_NETWORK = "app-network"
+
+# Container settings
+CONTAINER_PORT = "3000"
+CONTAINER_MEMORY = "512m"
+CONTAINER_CPU = "0.5"
+
+# =============================================================================
+# TESTING ENVIRONMENT
+# =============================================================================
+
+# Test configuration
+TEST_ENV = "test"
+TEST_DATABASE_URL = "postgresql://localhost:5432/{{ config_root | basename }}_test"
+TEST_TIMEOUT = "60000"
+
+# Test flags
+COVERAGE = "true"
+WATCH_MODE = "false"
+PARALLEL_TESTS = "true"
+
+# =============================================================================
+# MONITORING AND LOGGING
+# =============================================================================
+
+# Logging configuration
+LOG_FORMAT = "json"
+LOG_FILE = "{{ config_root }}/logs/app.log"
+LOG_ROTATION = "daily"
+
+# Monitoring
+METRICS_ENABLED = "true"
+TRACING_ENABLED = "{{ env.NODE_ENV == 'production' and 'true' or 'false' }}"
+HEALTH_CHECK_PORT = "9090"
+
+# =============================================================================
+# PERFORMANCE TUNING
+# =============================================================================
+
+# Performance settings
+WORKER_THREADS = "{{ env.CPU_COUNT | default(value='4') }}"
+CACHE_SIZE = "100mb"
+REQUEST_TIMEOUT = "30000"
+
+# Memory settings
+MAX_MEMORY = "1gb"
+GC_INTERVAL = "60000"

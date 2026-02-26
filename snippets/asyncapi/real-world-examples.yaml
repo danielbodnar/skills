@@ -1,0 +1,859 @@
+# Real-World AsyncAPI Examples
+# Collection of practical AsyncAPI specifications for common use cases
+
+# E-commerce Order System
+---
+asyncapi: 3.0.0
+id: 'urn:com:example:ecommerce:order-service'
+info:
+  title: E-commerce Order Service
+  version: 2.1.0
+  description: |
+    The Order Service manages order lifecycle events in an e-commerce platform.
+    It handles order creation, payment processing, fulfillment, and customer notifications.
+  contact:
+    name: Platform Team
+    email: platform@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  production:
+    host: kafka.prod.example.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+    bindings:
+      kafka:
+        schemaRegistryUrl: https://schema-registry.prod.example.com
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka
+
+defaultContentType: application/json
+
+channels:
+  order-events:
+    address: 'commerce.orders.v2'
+    description: Order lifecycle events
+    parameters:
+      version:
+        description: Event schema version
+        schema:
+          type: string
+          enum: ['v1', 'v2']
+          default: 'v2'
+    messages:
+      orderCreated:
+        $ref: '#/components/messages/OrderCreated'
+      orderPaid:
+        $ref: '#/components/messages/OrderPaid'
+      orderShipped:
+        $ref: '#/components/messages/OrderShipped'
+      orderCancelled:
+        $ref: '#/components/messages/OrderCancelled'
+
+  inventory-events:
+    address: 'commerce.inventory.{region}'
+    description: Inventory management events
+    parameters:
+      region:
+        description: Geographic region
+        schema:
+          type: string
+          enum: ['us-west', 'us-east', 'eu-west', 'asia-pacific']
+    messages:
+      stockUpdated:
+        $ref: '#/components/messages/StockUpdated'
+      stockLow:
+        $ref: '#/components/messages/StockLow'
+
+  customer-notifications:
+    address: 'notifications.customer.{customerId}'
+    description: Customer notification channel
+    parameters:
+      customerId:
+        $ref: '#/components/parameters/CustomerId'
+    messages:
+      orderConfirmation:
+        $ref: '#/components/messages/OrderConfirmation'
+      shippingUpdate:
+        $ref: '#/components/messages/ShippingUpdate'
+
+operations:
+  publishOrderCreated:
+    action: send
+    channel:
+      $ref: '#/channels/order-events'
+    summary: Publish order creation event
+    description: Publishes an event when a new order is created
+    messages:
+      - $ref: '#/channels/order-events/messages/orderCreated'
+    tags:
+      - name: orders
+      - name: events
+
+  handleOrderCreated:
+    action: receive
+    channel:
+      $ref: '#/channels/order-events'
+    summary: Handle order creation
+    description: Process new order events for downstream services
+    messages:
+      - $ref: '#/channels/order-events/messages/orderCreated'
+    tags:
+      - name: orders
+      - name: processing
+
+  updateInventory:
+    action: send
+    channel:
+      $ref: '#/channels/inventory-events'
+    summary: Update inventory levels
+    description: Publishes inventory updates when stock changes
+    messages:
+      - $ref: '#/channels/inventory-events/messages/stockUpdated'
+    tags:
+      - name: inventory
+
+  notifyCustomer:
+    action: send
+    channel:
+      $ref: '#/channels/customer-notifications'
+    summary: Send customer notification
+    description: Sends notifications to customers about their orders
+    messages:
+      - $ref: '#/channels/customer-notifications/messages/orderConfirmation'
+      - $ref: '#/channels/customer-notifications/messages/shippingUpdate'
+    tags:
+      - name: notifications
+      - name: customer-experience
+
+components:
+  messages:
+    OrderCreated:
+      name: OrderCreated
+      title: Order Created Event
+      summary: Published when a new order is created
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+      payload:
+        $ref: '#/components/schemas/OrderCreatedPayload'
+      correlationId:
+        $ref: '#/components/correlationIds/orderCorrelationId'
+      examples:
+        - name: StandardOrder
+          summary: Standard product order
+          headers:
+            eventId: '550e8400-e29b-41d4-a716-446655440000'
+            eventType: 'order.created'
+            source: 'order-service'
+            timestamp: '2023-12-01T10:30:00Z'
+          payload:
+            orderId: 'ORD-001'
+            customerId: 'CUST-123'
+            items:
+              - productId: 'PROD-456'
+                quantity: 2
+                price: 29.99
+            totalAmount: 59.98
+            currency: 'USD'
+            createdAt: '2023-12-01T10:30:00Z'
+
+    OrderPaid:
+      name: OrderPaid
+      title: Order Payment Confirmed
+      summary: Published when order payment is successfully processed
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+      payload:
+        $ref: '#/components/schemas/OrderPaidPayload'
+      correlationId:
+        $ref: '#/components/correlationIds/orderCorrelationId'
+
+    OrderShipped:
+      name: OrderShipped
+      title: Order Shipped Event
+      summary: Published when order is shipped
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+      payload:
+        $ref: '#/components/schemas/OrderShippedPayload'
+      correlationId:
+        $ref: '#/components/correlationIds/orderCorrelationId'
+
+    OrderCancelled:
+      name: OrderCancelled
+      title: Order Cancelled Event
+      summary: Published when order is cancelled
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+      payload:
+        $ref: '#/components/schemas/OrderCancelledPayload'
+      correlationId:
+        $ref: '#/components/correlationIds/orderCorrelationId'
+
+    StockUpdated:
+      name: StockUpdated
+      title: Inventory Stock Updated
+      summary: Published when product stock levels change
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+      payload:
+        $ref: '#/components/schemas/StockUpdatedPayload'
+
+    StockLow:
+      name: StockLow
+      title: Low Stock Alert
+      summary: Published when product stock falls below threshold
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+      payload:
+        $ref: '#/components/schemas/StockLowPayload'
+
+    OrderConfirmation:
+      name: OrderConfirmation
+      title: Order Confirmation Notification
+      summary: Sent to customer confirming order placement
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/NotificationHeaders'
+      payload:
+        $ref: '#/components/schemas/OrderConfirmationPayload'
+
+    ShippingUpdate:
+      name: ShippingUpdate
+      title: Shipping Status Update
+      summary: Sent to customer with shipping information
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/NotificationHeaders'
+      payload:
+        $ref: '#/components/schemas/ShippingUpdatePayload'
+
+  schemas:
+    EventHeaders:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - source
+        - timestamp
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique identifier for the event
+        eventType:
+          type: string
+          description: Type of event being published
+        source:
+          type: string
+          description: Service that published the event
+        timestamp:
+          type: string
+          format: date-time
+          description: When the event occurred
+        version:
+          type: string
+          default: '1.0'
+          description: Event schema version
+        correlationId:
+          type: string
+          format: uuid
+          description: Correlation ID for tracing
+
+    NotificationHeaders:
+      type: object
+      required:
+        - notificationId
+        - customerId
+        - timestamp
+      properties:
+        notificationId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        channel:
+          type: string
+          enum: ['email', 'sms', 'push', 'in-app']
+
+    OrderCreatedPayload:
+      type: object
+      required:
+        - orderId
+        - customerId
+        - items
+        - totalAmount
+        - currency
+        - createdAt
+      properties:
+        orderId:
+          type: string
+          pattern: '^ORD-[0-9]+$'
+        customerId:
+          type: string
+          pattern: '^CUST-[0-9]+$'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+          minItems: 1
+        totalAmount:
+          type: number
+          minimum: 0
+          multipleOf: 0.01
+        currency:
+          type: string
+          enum: ['USD', 'EUR', 'GBP', 'JPY']
+        createdAt:
+          type: string
+          format: date-time
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+        billingAddress:
+          $ref: '#/components/schemas/Address'
+
+    OrderPaidPayload:
+      type: object
+      required:
+        - orderId
+        - paymentId
+        - amount
+        - paymentMethod
+        - paidAt
+      properties:
+        orderId:
+          type: string
+          pattern: '^ORD-[0-9]+$'
+        paymentId:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+        paymentMethod:
+          type: string
+          enum: ['credit_card', 'debit_card', 'paypal', 'bank_transfer']
+        paidAt:
+          type: string
+          format: date-time
+
+    OrderShippedPayload:
+      type: object
+      required:
+        - orderId
+        - trackingNumber
+        - carrier
+        - shippedAt
+      properties:
+        orderId:
+          type: string
+          pattern: '^ORD-[0-9]+$'
+        trackingNumber:
+          type: string
+        carrier:
+          type: string
+          enum: ['fedex', 'ups', 'dhl', 'usps']
+        shippedAt:
+          type: string
+          format: date-time
+        estimatedDelivery:
+          type: string
+          format: date-time
+
+    OrderCancelledPayload:
+      type: object
+      required:
+        - orderId
+        - reason
+        - cancelledAt
+      properties:
+        orderId:
+          type: string
+          pattern: '^ORD-[0-9]+$'
+        reason:
+          type: string
+          enum: ['customer_request', 'payment_failed', 'inventory_unavailable', 'fraud_detected']
+        cancelledAt:
+          type: string
+          format: date-time
+        refundAmount:
+          type: number
+          minimum: 0
+
+    StockUpdatedPayload:
+      type: object
+      required:
+        - productId
+        - currentStock
+        - previousStock
+        - updatedAt
+      properties:
+        productId:
+          type: string
+          pattern: '^PROD-[0-9]+$'
+        currentStock:
+          type: integer
+          minimum: 0
+        previousStock:
+          type: integer
+          minimum: 0
+        updatedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          enum: ['sale', 'restock', 'adjustment', 'return']
+
+    StockLowPayload:
+      type: object
+      required:
+        - productId
+        - currentStock
+        - threshold
+        - alertedAt
+      properties:
+        productId:
+          type: string
+          pattern: '^PROD-[0-9]+$'
+        currentStock:
+          type: integer
+          minimum: 0
+        threshold:
+          type: integer
+          minimum: 0
+        alertedAt:
+          type: string
+          format: date-time
+
+    OrderConfirmationPayload:
+      type: object
+      required:
+        - orderId
+        - customerName
+        - items
+        - totalAmount
+      properties:
+        orderId:
+          type: string
+        customerName:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        totalAmount:
+          type: number
+        estimatedDelivery:
+          type: string
+          format: date-time
+
+    ShippingUpdatePayload:
+      type: object
+      required:
+        - orderId
+        - trackingNumber
+        - status
+      properties:
+        orderId:
+          type: string
+        trackingNumber:
+          type: string
+        status:
+          type: string
+          enum: ['shipped', 'in_transit', 'out_for_delivery', 'delivered']
+        location:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    OrderItem:
+      type: object
+      required:
+        - productId
+        - quantity
+        - price
+      properties:
+        productId:
+          type: string
+          pattern: '^PROD-[0-9]+$'
+        productName:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        price:
+          type: number
+          minimum: 0
+          multipleOf: 0.01
+        discount:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    Address:
+      type: object
+      required:
+        - street
+        - city
+        - state
+        - postalCode
+        - country
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+          pattern: '^[A-Z]{2}$'
+
+  parameters:
+    CustomerId:
+      description: Unique customer identifier
+      schema:
+        type: string
+        pattern: '^CUST-[0-9]+$'
+
+  correlationIds:
+    orderCorrelationId:
+      description: Correlation ID for order-related events
+      location: $message.header#/correlationId
+
+  securitySchemes:
+    kafkaAuth:
+      type: plain
+      description: Kafka SASL/PLAIN authentication
+
+  tags:
+    - name: orders
+      description: Order management operations
+    - name: inventory
+      description: Inventory management operations  
+    - name: notifications
+      description: Customer notification operations
+    - name: events
+      description: Event publishing operations
+    - name: processing
+      description: Event processing operations
+    - name: customer-experience
+      description: Customer-facing operations
+
+---
+# IoT Sensor Network Example
+asyncapi: 3.0.0
+id: 'urn:com:example:iot:sensor-network'
+info:
+  title: IoT Sensor Network
+  version: 1.2.0
+  description: |
+    IoT sensor network for environmental monitoring.
+    Collects temperature, humidity, and air quality data from distributed sensors.
+
+servers:
+  production:
+    host: mqtt.iot.example.com:8883
+    protocol: mqtt
+    description: Production MQTT broker with TLS
+    security:
+      - mqttAuth: []
+    bindings:
+      mqtt:
+        clientId: 'iot-gateway-{$random}'
+        cleanSession: true
+        keepAlive: 60
+
+channels:
+  sensor-data:
+    address: 'sensors/{sensorId}/data'
+    description: Individual sensor data streams
+    parameters:
+      sensorId:
+        description: Unique sensor identifier
+        schema:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+    messages:
+      temperatureReading:
+        $ref: '#/components/messages/TemperatureReading'
+      humidityReading:
+        $ref: '#/components/messages/HumidityReading'
+      airQualityReading:
+        $ref: '#/components/messages/AirQualityReading'
+
+  sensor-status:
+    address: 'sensors/{sensorId}/status'
+    description: Sensor health and status updates
+    parameters:
+      sensorId:
+        schema:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+    messages:
+      sensorOnline:
+        $ref: '#/components/messages/SensorOnline'
+      sensorOffline:
+        $ref: '#/components/messages/SensorOffline'
+      batteryLow:
+        $ref: '#/components/messages/BatteryLow'
+
+  alerts:
+    address: 'alerts/{severity}'
+    description: System-wide alerts
+    parameters:
+      severity:
+        schema:
+          type: string
+          enum: ['low', 'medium', 'high', 'critical']
+    messages:
+      thresholdAlert:
+        $ref: '#/components/messages/ThresholdAlert'
+
+operations:
+  receiveSensorData:
+    action: receive
+    channel:
+      $ref: '#/channels/sensor-data'
+    summary: Receive sensor readings
+    messages:
+      - $ref: '#/channels/sensor-data/messages/temperatureReading'
+      - $ref: '#/channels/sensor-data/messages/humidityReading'
+      - $ref: '#/channels/sensor-data/messages/airQualityReading'
+
+  monitorSensorStatus:
+    action: receive
+    channel:
+      $ref: '#/channels/sensor-status'
+    summary: Monitor sensor health
+    messages:
+      - $ref: '#/channels/sensor-status/messages/sensorOnline'
+      - $ref: '#/channels/sensor-status/messages/sensorOffline'
+      - $ref: '#/channels/sensor-status/messages/batteryLow'
+
+  publishAlert:
+    action: send
+    channel:
+      $ref: '#/channels/alerts'
+    summary: Publish system alerts
+    messages:
+      - $ref: '#/channels/alerts/messages/thresholdAlert'
+
+components:
+  messages:
+    TemperatureReading:
+      name: TemperatureReading
+      title: Temperature Sensor Reading
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - sensorId
+          - temperature
+          - unit
+          - timestamp
+        properties:
+          sensorId:
+            type: string
+            pattern: '^[A-Z0-9]{8}$'
+          temperature:
+            type: number
+            minimum: -50
+            maximum: 150
+          unit:
+            type: string
+            enum: ['celsius', 'fahrenheit']
+          timestamp:
+            type: string
+            format: date-time
+          location:
+            $ref: '#/components/schemas/Location'
+
+    HumidityReading:
+      name: HumidityReading
+      title: Humidity Sensor Reading
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - sensorId
+          - humidity
+          - timestamp
+        properties:
+          sensorId:
+            type: string
+            pattern: '^[A-Z0-9]{8}$'
+          humidity:
+            type: number
+            minimum: 0
+            maximum: 100
+          timestamp:
+            type: string
+            format: date-time
+
+    AirQualityReading:
+      name: AirQualityReading
+      title: Air Quality Sensor Reading
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - sensorId
+          - aqi
+          - pm2_5
+          - pm10
+          - timestamp
+        properties:
+          sensorId:
+            type: string
+            pattern: '^[A-Z0-9]{8}$'
+          aqi:
+            type: integer
+            minimum: 0
+            maximum: 500
+          pm2_5:
+            type: number
+            minimum: 0
+          pm10:
+            type: number
+            minimum: 0
+          timestamp:
+            type: string
+            format: date-time
+
+    SensorOnline:
+      name: SensorOnline
+      title: Sensor Online Status
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - sensorId
+          - timestamp
+        properties:
+          sensorId:
+            type: string
+          timestamp:
+            type: string
+            format: date-time
+          firmwareVersion:
+            type: string
+          batteryLevel:
+            type: number
+            minimum: 0
+            maximum: 100
+
+    SensorOffline:
+      name: SensorOffline
+      title: Sensor Offline Status
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - sensorId
+          - timestamp
+          - reason
+        properties:
+          sensorId:
+            type: string
+          timestamp:
+            type: string
+            format: date-time
+          reason:
+            type: string
+            enum: ['battery_dead', 'network_error', 'hardware_failure', 'maintenance']
+
+    BatteryLow:
+      name: BatteryLow
+      title: Low Battery Alert
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - sensorId
+          - batteryLevel
+          - timestamp
+        properties:
+          sensorId:
+            type: string
+          batteryLevel:
+            type: number
+            minimum: 0
+            maximum: 100
+          timestamp:
+            type: string
+            format: date-time
+
+    ThresholdAlert:
+      name: ThresholdAlert
+      title: Threshold Exceeded Alert
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - alertId
+          - sensorId
+          - metric
+          - value
+          - threshold
+          - severity
+          - timestamp
+        properties:
+          alertId:
+            type: string
+            format: uuid
+          sensorId:
+            type: string
+          metric:
+            type: string
+            enum: ['temperature', 'humidity', 'aqi', 'pm2_5', 'pm10']
+          value:
+            type: number
+          threshold:
+            type: number
+          severity:
+            type: string
+            enum: ['low', 'medium', 'high', 'critical']
+          timestamp:
+            type: string
+            format: date-time
+
+  schemas:
+    Location:
+      type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        altitude:
+          type: number
+        description:
+          type: string
+
+  securitySchemes:
+    mqttAuth:
+      type: userPassword
+      description: MQTT username/password authentication

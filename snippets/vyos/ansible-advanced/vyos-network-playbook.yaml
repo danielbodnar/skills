@@ -1,0 +1,358 @@
+---
+# Advanced VyOS Network Configuration Playbook
+# Comprehensive Ansible automation for VyOS network infrastructure
+
+- name: Configure VyOS Network Infrastructure
+  hosts: vyos_routers
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  
+  vars:
+    ansible_network_os: vyos.vyos.vyos
+    ansible_user: vyos
+    ansible_ssh_pass: "{{ vyos_password | default('vyos') }}"
+    ansible_connection: ansible.netcommon.network_cli
+    ansible_command_timeout: 60
+    
+    # Global configuration variables
+    domain_name: "network.local"
+    dns_servers:
+      - "8.8.8.8"
+      - "8.8.4.4"
+    ntp_servers:
+      - "0.pool.ntp.org"
+      - "1.pool.ntp.org"
+    
+    # BGP configuration
+    bgp_config:
+      local_as: "65001"
+      router_id: "{{ ansible_host }}"
+      neighbors: []
+    
+    # OSPF configuration  
+    ospf_config:
+      router_id: "{{ ansible_host }}"
+      areas:
+        - area_id: "0"
+          networks:
+            - "192.168.0.0/16"
+            - "10.0.0.0/8"
+    
+    # VPN configuration
+    vpn_config:
+      wireguard:
+        enabled: false
+        interface: "wg01"
+        listen_port: 51820
+        server_ip: "10.0.0.1/24"
+      ipsec:
+        enabled: false
+        psk: "{{ ipsec_psk | default('changeme') }}"
+    
+    # Firewall zones
+    firewall_zones:
+      - name: "LAN"
+        interfaces: ["eth0"]
+        default_action: "accept"
+      - name: "WAN" 
+        interfaces: ["eth1"]
+        default_action: "drop"
+      - name: "DMZ"
+        interfaces: ["eth2"]
+        default_action: "drop"
+
+  tasks:
+    - name: Gather VyOS facts
+      vyos.vyos.vyos_facts:
+        gather_subset: all
+      tags: [facts]
+      
+    - name: Display router information
+      debug:
+        msg: |
+          Router: {{ ansible_net_hostname | default('Unknown') }}
+          Version: {{ ansible_net_version | default('Unknown') }}
+          Model: {{ ansible_net_model | default('Unknown') }}
+          Interfaces: {{ ansible_net_interfaces.keys() | list if ansible_net_interfaces else [] }}
+      tags: [facts]
+
+    # System Configuration
+    - name: Configure system settings
+      vyos.vyos.vyos_config:
+        lines:
+          - set system host-name '{{ inventory_hostname }}'
+          - set system domain-name '{{ domain_name }}'
+          - set system time-zone 'UTC'
+        save: true
+      tags: [system]
+      
+    - name: Configure DNS servers
+      vyos.vyos.vyos_config:
+        lines: |
+          {% for dns in dns_servers %}
+          set system name-server '{{ dns }}'
+          {% endfor %}
+        save: true
+      tags: [system, dns]
+      
+    - name: Configure NTP servers
+      vyos.vyos.vyos_config:
+        lines: |
+          {% for ntp in ntp_servers %}
+          set system ntp server '{{ ntp }}'
+          {% endfor %}
+        save: true
+      tags: [system, ntp]
+
+    # Interface Configuration
+    - name: Configure interfaces
+      vyos.vyos.vyos_interfaces:
+        config:
+          - name: "{{ item.name }}"
+            description: "{{ item.description | default(omit) }}"
+            enabled: "{{ item.enabled | default(true) }}"
+            duplex: "{{ item.duplex | default(omit) }}"
+            speed: "{{ item.speed | default(omit) }}"
+            mtu: "{{ item.mtu | default(omit) }}"
+        state: merged
+      loop: "{{ interfaces | default([]) }}"
+      when: interfaces is defined
+      tags: [interfaces]
+      
+    - name: Configure interface IP addresses
+      vyos.vyos.vyos_l3_interfaces:
+        config:
+          - name: "{{ item.name }}"
+            ipv4: "{{ item.ipv4 | default(omit) }}"
+            ipv6: "{{ item.ipv6 | default(omit) }}"
+        state: merged
+      loop: "{{ interfaces | default([]) }}"
+      when: interfaces is defined and (item.ipv4 is defined or item.ipv6 is defined)
+      tags: [interfaces, ip]
+
+    # VLAN Configuration
+    - name: Configure VLANs
+      vyos.vyos.vyos_config:
+        lines: |
+          {% for vlan in vlans | default([]) %}
+          set interfaces ethernet {{ vlan.parent }} vif {{ vlan.id }} address '{{ vlan.address }}'
+          set interfaces ethernet {{ vlan.parent }} vif {{ vlan.id }} description '{{ vlan.description | default("VLAN " + vlan.id|string) }}'
+          {% endfor %}
+        save: true
+      when: vlans is defined
+      tags: [vlans]
+
+    # Routing Configuration
+    - name: Configure static routes
+      vyos.vyos.vyos_static_routes:
+        config:
+          - address_families:
+              - afi: ipv4
+                routes: "{{ static_routes | default([]) }}"
+        state: merged
+      when: static_routes is defined
+      tags: [routing, static]
+      
+    - name: Configure OSPF
+      vyos.vyos.vyos_config:
+        lines: |
+          set protocols ospf router-id '{{ ospf_config.router_id }}'
+          set protocols ospf log-adjacency-changes
+          {% for area in ospf_config.areas %}
+          {% for network in area.networks %}
+          set protocols ospf area {{ area.area_id }} network '{{ network }}'
+          {% endfor %}
+          {% endfor %}
+        save: true
+      when: ospf_config is defined and ospf_enabled | default(false)
+      tags: [routing, ospf]
+      
+    - name: Configure BGP
+      vyos.vyos.vyos_config:
+        lines: |
+          set protocols bgp system-as '{{ bgp_config.local_as }}'
+          set protocols bgp router-id '{{ bgp_config.router_id }}'
+          set protocols bgp parameters log-neighbor-changes
+          {% for neighbor in bgp_config.neighbors %}
+          set protocols bgp neighbor {{ neighbor.ip }} remote-as '{{ neighbor.remote_as }}'
+          set protocols bgp neighbor {{ neighbor.ip }} description '{{ neighbor.description | default("BGP Neighbor") }}'
+          {% if neighbor.password is defined %}
+          set protocols bgp neighbor {{ neighbor.ip }} password '{{ neighbor.password }}'
+          {% endif %}
+          {% endfor %}
+        save: true
+      when: bgp_config is defined and bgp_enabled | default(false)
+      tags: [routing, bgp]
+
+    # Firewall Configuration
+    - name: Configure firewall zones
+      vyos.vyos.vyos_config:
+        lines: |
+          {% for zone in firewall_zones %}
+          set firewall zone {{ zone.name }} description '{{ zone.description | default(zone.name + " Zone") }}'
+          set firewall zone {{ zone.name }} default-action '{{ zone.default_action }}'
+          {% for interface in zone.interfaces %}
+          set firewall zone {{ zone.name }} interface '{{ interface }}'
+          {% endfor %}
+          {% endfor %}
+        save: true
+      when: firewall_zones is defined
+      tags: [firewall, zones]
+      
+    - name: Configure firewall rules
+      vyos.vyos.vyos_config:
+        lines: |
+          {% for rule in firewall_rules | default([]) %}
+          set firewall name {{ rule.chain }} rule {{ rule.number }} action '{{ rule.action }}'
+          {% if rule.protocol is defined %}
+          set firewall name {{ rule.chain }} rule {{ rule.number }} protocol '{{ rule.protocol }}'
+          {% endif %}
+          {% if rule.source is defined %}
+          set firewall name {{ rule.chain }} rule {{ rule.number }} source address '{{ rule.source }}'
+          {% endif %}
+          {% if rule.destination is defined %}
+          set firewall name {{ rule.chain }} rule {{ rule.number }} destination address '{{ rule.destination }}'
+          {% endif %}
+          {% if rule.port is defined %}
+          set firewall name {{ rule.chain }} rule {{ rule.number }} destination port '{{ rule.port }}'
+          {% endif %}
+          {% if rule.description is defined %}
+          set firewall name {{ rule.chain }} rule {{ rule.number }} description '{{ rule.description }}'
+          {% endif %}
+          {% endfor %}
+        save: true
+      when: firewall_rules is defined
+      tags: [firewall, rules]
+
+    # NAT Configuration
+    - name: Configure NAT rules
+      vyos.vyos.vyos_config:
+        lines: |
+          {% for nat_rule in nat_rules | default([]) %}
+          {% if nat_rule.type == 'source' %}
+          set nat source rule {{ nat_rule.number }} outbound-interface '{{ nat_rule.outbound_interface }}'
+          set nat source rule {{ nat_rule.number }} source address '{{ nat_rule.source }}'
+          set nat source rule {{ nat_rule.number }} translation address '{{ nat_rule.translation }}'
+          {% elif nat_rule.type == 'destination' %}
+          set nat destination rule {{ nat_rule.number }} inbound-interface '{{ nat_rule.inbound_interface }}'
+          set nat destination rule {{ nat_rule.number }} destination address '{{ nat_rule.destination }}'
+          set nat destination rule {{ nat_rule.number }} destination port '{{ nat_rule.port | default("") }}'
+          set nat destination rule {{ nat_rule.number }} translation address '{{ nat_rule.translation }}'
+          {% if nat_rule.translation_port is defined %}
+          set nat destination rule {{ nat_rule.number }} translation port '{{ nat_rule.translation_port }}'
+          {% endif %}
+          {% endif %}
+          {% if nat_rule.description is defined %}
+          set nat {{ nat_rule.type }} rule {{ nat_rule.number }} description '{{ nat_rule.description }}'
+          {% endif %}
+          {% endfor %}
+        save: true
+      when: nat_rules is defined
+      tags: [nat]
+
+    # VPN Configuration
+    - name: Configure WireGuard VPN
+      vyos.vyos.vyos_config:
+        lines: |
+          set interfaces wireguard {{ vpn_config.wireguard.interface }} address '{{ vpn_config.wireguard.server_ip }}'
+          set interfaces wireguard {{ vpn_config.wireguard.interface }} description 'WireGuard VPN Server'
+          set interfaces wireguard {{ vpn_config.wireguard.interface }} port '{{ vpn_config.wireguard.listen_port }}'
+          {% for peer in wireguard_peers | default([]) %}
+          set interfaces wireguard {{ vpn_config.wireguard.interface }} peer {{ peer.name }} address '{{ peer.address }}'
+          set interfaces wireguard {{ vpn_config.wireguard.interface }} peer {{ peer.name }} allowed-ips '{{ peer.allowed_ips }}'
+          set interfaces wireguard {{ vpn_config.wireguard.interface }} peer {{ peer.name }} public-key '{{ peer.public_key }}'
+          {% if peer.persistent_keepalive is defined %}
+          set interfaces wireguard {{ vpn_config.wireguard.interface }} peer {{ peer.name }} persistent-keepalive '{{ peer.persistent_keepalive }}'
+          {% endif %}
+          {% endfor %}
+        save: true
+      when: vpn_config.wireguard.enabled | default(false)
+      tags: [vpn, wireguard]
+
+    # Service Configuration
+    - name: Configure DHCP server
+      vyos.vyos.vyos_config:
+        lines: |
+          {% for dhcp_scope in dhcp_scopes | default([]) %}
+          set service dhcp-server shared-network-name {{ dhcp_scope.name }} subnet {{ dhcp_scope.subnet }} default-router '{{ dhcp_scope.default_router }}'
+          set service dhcp-server shared-network-name {{ dhcp_scope.name }} subnet {{ dhcp_scope.subnet }} dns-server '{{ dhcp_scope.dns_server | default(dhcp_scope.default_router) }}'
+          set service dhcp-server shared-network-name {{ dhcp_scope.name }} subnet {{ dhcp_scope.subnet }} domain-name '{{ dhcp_scope.domain_name | default(domain_name) }}'
+          set service dhcp-server shared-network-name {{ dhcp_scope.name }} subnet {{ dhcp_scope.subnet }} range 0 start '{{ dhcp_scope.range_start }}'
+          set service dhcp-server shared-network-name {{ dhcp_scope.name }} subnet {{ dhcp_scope.subnet }} range 0 stop '{{ dhcp_scope.range_stop }}'
+          {% if dhcp_scope.lease_time is defined %}
+          set service dhcp-server shared-network-name {{ dhcp_scope.name }} subnet {{ dhcp_scope.subnet }} lease '{{ dhcp_scope.lease_time }}'
+          {% endif %}
+          {% endfor %}
+        save: true
+      when: dhcp_scopes is defined
+      tags: [services, dhcp]
+      
+    - name: Configure DNS forwarding
+      vyos.vyos.vyos_config:
+        lines: |
+          {% for dns_config in dns_forwarding | default([]) %}
+          set service dns forwarding listen-address '{{ dns_config.listen_address }}'
+          set service dns forwarding allow-from '{{ dns_config.allow_from }}'
+          {% for nameserver in dns_config.nameservers %}
+          set service dns forwarding name-server '{{ nameserver }}'
+          {% endfor %}
+          {% if dns_config.cache_size is defined %}
+          set service dns forwarding cache-size '{{ dns_config.cache_size }}'
+          {% endif %}
+          {% endfor %}
+        save: true
+      when: dns_forwarding is defined
+      tags: [services, dns]
+
+    # Monitoring and Logging
+    - name: Configure SNMP
+      vyos.vyos.vyos_config:
+        lines: |
+          {% for snmp_config in snmp_communities | default([]) %}
+          set service snmp community '{{ snmp_config.name }}' authorization '{{ snmp_config.authorization | default("ro") }}'
+          {% for network in snmp_config.networks %}
+          set service snmp community '{{ snmp_config.name }}' network '{{ network }}'
+          {% endfor %}
+          {% endfor %}
+          {% if snmp_contact is defined %}
+          set service snmp contact '{{ snmp_contact }}'
+          {% endif %}
+          {% if snmp_location is defined %}
+          set service snmp location '{{ snmp_location }}'
+          {% endif %}
+        save: true
+      when: snmp_communities is defined
+      tags: [monitoring, snmp]
+      
+    - name: Configure syslog
+      vyos.vyos.vyos_config:
+        lines: |
+          set system syslog global facility all level 'info'
+          {% for syslog_server in syslog_servers | default([]) %}
+          set system syslog host '{{ syslog_server.host }}' facility all level '{{ syslog_server.level | default("info") }}'
+          set system syslog host '{{ syslog_server.host }}' port '{{ syslog_server.port | default("514") }}'
+          {% endfor %}
+        save: true
+      when: syslog_servers is defined
+      tags: [monitoring, syslog]
+
+    # Final tasks
+    - name: Save configuration
+      vyos.vyos.vyos_config:
+        save: true
+      tags: [always]
+      
+    - name: Display configuration status
+      vyos.vyos.vyos_command:
+        commands:
+          - show version
+          - show interfaces
+          - show protocols
+          - show service
+      register: status_output
+      tags: [status]
+      
+    - name: Show final configuration status
+      debug:
+        var: status_output.stdout_lines
+      tags: [status]

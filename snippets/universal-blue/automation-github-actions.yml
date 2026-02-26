@@ -1,0 +1,336 @@
+# Universal Blue - GitHub Actions Automation Examples
+# Collection of workflow configurations for building and managing Universal Blue images
+
+# Basic Image Build Workflow
+name: Build Universal Blue Image
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+
+env:
+  IMAGE_NAME: my-custom-image
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  build:
+    name: Build and push image
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image_flavor: [main, nvidia]
+        fedora_version: [39, 40]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate tags
+        id: generate-tags
+        shell: bash
+        run: |
+          TIMESTAMP="$(date +%Y%m%d)"
+          VARIANT="${{ matrix.image_flavor }}-${{ matrix.fedora_version }}"
+
+          COMMIT_TAGS=()
+          BUILD_TAGS=()
+
+          # Have tags for tracking builds during pull request
+          SHA_SHORT="${GITHUB_SHA::7}"
+          COMMIT_TAGS+=("pr-${{ github.event.number }}-${VARIANT}")
+          COMMIT_TAGS+=("${SHA_SHORT}-${VARIANT}")
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              COMMIT_TAGS+=("pr-${{ github.event.number }}-${VARIANT}-${TIMESTAMP}")
+          else
+              BUILD_TAGS+=("${VARIANT}")
+              BUILD_TAGS+=("${VARIANT}-${TIMESTAMP}")
+          fi
+
+          if [[ "${{ matrix.image_flavor }}" == "main" ]] && [[ "${{ matrix.fedora_version }}" == "40" ]]; then
+              BUILD_TAGS+=("latest")
+          fi
+
+          BUILD_TAGS_STR=$(IFS=,; echo "${BUILD_TAGS[*]}")
+          COMMIT_TAGS_STR=$(IFS=,; echo "${COMMIT_TAGS[*]}")
+
+          echo "Generated the following build tags: "
+          for TAG in "${BUILD_TAGS[@]}"; do
+              echo "  ${TAG}"
+          done
+
+          echo "Generated the following commit tags: "
+          for TAG in "${COMMIT_TAGS[@]}"; do
+              echo "  ${TAG}"
+          done
+
+          echo "build-tags=${BUILD_TAGS_STR}" >> $GITHUB_OUTPUT
+          echo "commit-tags=${COMMIT_TAGS_STR}" >> $GITHUB_OUTPUT
+
+      - name: Get current version
+        id: labels
+        uses: Wandalen/wretry.action@v1.3.0
+        with:
+          command: skopeo inspect docker://ghcr.io/ublue-os/${{ env.SOURCE_IMAGE }}:${{ matrix.fedora_version }}
+          attempt_limit: 3
+          attempt_delay: 15000
+        env:
+          SOURCE_IMAGE: ${{ matrix.image_flavor == 'nvidia' && 'silverblue-nvidia' || 'silverblue-main' }}
+
+      - name: Build Image
+        id: build_image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          containerfiles: |
+            ./Containerfile
+          image: ${{ env.IMAGE_NAME }}
+          tags: |
+            ${{ steps.generate-tags.outputs.build-tags }}
+            ${{ steps.generate-tags.outputs.commit-tags }}
+          build-args: |
+            IMAGE_FLAVOR=${{ matrix.image_flavor }}
+            FEDORA_MAJOR_VERSION=${{ matrix.fedora_version }}
+          labels: |
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.description=Custom Universal Blue image
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          extra-args: |
+            --target=${{ matrix.image_flavor }}
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v4
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to Container Registry
+        uses: redhat-actions/push-to-registry@v2
+        if: github.event_name != 'pull_request'
+        id: push
+        with:
+          image: ${{ steps.build_image.outputs.image }}
+          tags: ${{ steps.build_image.outputs.tags }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          extra-args: |
+            --disable-content-trust
+
+      - name: Sign container image
+        uses: EyeCantCU/cosign-action/sign@v0.2.2
+        if: github.event_name != 'pull_request'
+        with:
+          containers: ${{ env.IMAGE_NAME }}
+          registry-token: ${{ secrets.GITHUB_TOKEN }}
+          signing-secret: ${{ secrets.SIGNING_SECRET }}
+          tags: ${{ steps.push.outputs.registry-path }}@${{ steps.push.outputs.digest }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        if: github.event_name != 'pull_request'
+        id: attest
+        with:
+          subject-name: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+---
+# BlueBuild Recipe Validation Workflow
+name: Validate BlueBuild Recipes
+on:
+  push:
+    paths:
+      - 'recipes/*.yml'
+      - 'recipes/*.yaml'
+  pull_request:
+    paths:
+      - 'recipes/*.yml'
+      - 'recipes/*.yaml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install BlueBuild CLI
+        run: |
+          curl -s https://api.github.com/repos/blue-build/cli/releases/latest | \
+          jq -r '.assets[] | select(.name | contains("linux-x86_64")) | .browser_download_url' | \
+          xargs curl -L -o bluebuild
+          chmod +x bluebuild
+          sudo mv bluebuild /usr/local/bin/
+
+      - name: Validate recipes
+        run: |
+          for recipe in recipes/*.yml recipes/*.yaml; do
+            if [ -f "$recipe" ]; then
+              echo "Validating $recipe"
+              bluebuild validate "$recipe"
+            fi
+          done
+
+      - name: Test recipe build (dry-run)
+        run: |
+          for recipe in recipes/*.yml recipes/*.yaml; do
+            if [ -f "$recipe" ]; then
+              echo "Testing build for $recipe"
+              bluebuild build --dry-run "$recipe"
+            fi
+          done
+
+---
+# VM Image Generation Workflow
+name: Generate VM Images
+on:
+  workflow_run:
+    workflows: ["Build Universal Blue Image"]
+    types:
+      - completed
+  schedule:
+    - cron: '0 12 * * 0'  # Weekly on Sunday at noon UTC
+
+jobs:
+  generate-vm-images:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    strategy:
+      matrix:
+        image_type: [qcow2, raw, iso]
+        image_flavor: [main, nvidia]
+        fedora_version: [40]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install bootc-image-builder
+        run: |
+          sudo dnf install -y podman
+          podman pull quay.io/centos-bootc/bootc-image-builder:latest
+
+      - name: Generate ${{ matrix.image_type }} image
+        run: |
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          IMAGE_TAG="${{ matrix.image_flavor }}-${{ matrix.fedora_version }}"
+          IMAGE_URL="ghcr.io/${{ github.repository_owner }}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+          mkdir -p output
+
+          podman run --rm \
+            --privileged \
+            --pull=newer \
+            --security-opt label=type:unconfined_t \
+            -v $(pwd)/output:/output \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type ${{ matrix.image_type }} \
+            --local \
+            ${IMAGE_URL}
+
+      - name: Upload VM images
+        uses: actions/upload-artifact@v4
+        with:
+          name: vm-images-${{ matrix.image_flavor }}-${{ matrix.fedora_version }}-${{ matrix.image_type }}
+          path: output/
+          retention-days: 30
+
+---
+# Security Scanning Workflow
+name: Security Scan
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 3 * * 1'  # Weekly on Monday at 3 AM UTC
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run container structure test
+        run: |
+          curl -LO https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
+          chmod +x container-structure-test-linux-amd64
+          sudo mv container-structure-test-linux-amd64 /usr/local/bin/container-structure-test
+
+          container-structure-test test \
+            --image ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest \
+            --config .github/container-tests.yaml
+
+---
+# Automated Updates Workflow
+name: Automated Updates
+on:
+  schedule:
+    - cron: '0 4 * * *'  # Daily at 4 AM UTC
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update base image references
+        run: |
+          # Update Containerfile base image tags
+          sed -i 's/ARG FEDORA_MAJOR_VERSION="${FEDORA_MAJOR_VERSION:-[0-9]*}"/ARG FEDORA_MAJOR_VERSION="${FEDORA_MAJOR_VERSION:-40}"/g' Containerfile
+
+          # Update recipe base image references
+          find recipes/ -name "*.yml" -o -name "*.yaml" | xargs sed -i 's/base-image: ghcr.io\/ublue-os\/.*:[0-9]*/base-image: ghcr.io\/ublue-os\/silverblue-main:40/g'
+
+      - name: Check for upstream updates
+        run: |
+          # Check for new Universal Blue releases
+          LATEST_TAG=$(curl -s https://api.github.com/repos/ublue-os/main/releases/latest | jq -r .tag_name)
+          echo "Latest Universal Blue tag: $LATEST_TAG"
+
+          # Update version references if needed
+          if [ "$LATEST_TAG" != "null" ]; then
+            echo "LATEST_UB_VERSION=$LATEST_TAG" >> $GITHUB_ENV
+          fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update dependencies and base images'
+          title: 'Automated dependency updates'
+          body: |
+            Automated updates to dependencies and base images.
+
+            - Updated Fedora version references
+            - Updated Universal Blue base image tags
+            - Latest Universal Blue version: ${{ env.LATEST_UB_VERSION }}
+          branch: automated-updates

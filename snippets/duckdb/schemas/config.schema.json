@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://duckdb.org/schemas/config.json",
+  "title": "DuckDB Configuration Schema",
+  "description": "Configuration options for DuckDB database instances",
+  "type": "object",
+  "properties": {
+    "access_mode": {
+      "type": "string",
+      "enum": ["READ_ONLY", "READ_WRITE"],
+      "default": "READ_WRITE",
+      "description": "Database access mode"
+    },
+    "threads": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$",
+      "default": "4",
+      "description": "Number of threads to use for query execution"
+    },
+    "max_memory": {
+      "type": "string",
+      "pattern": "^([1-9][0-9]*)(MB|GB|%)?$",
+      "default": "75%",
+      "description": "Maximum memory limit (e.g., '1GB', '512MB', '75%')"
+    },
+    "memory_limit": {
+      "type": "string",
+      "pattern": "^([1-9][0-9]*)(MB|GB|%)?$",
+      "description": "Memory limit for query execution"
+    },
+    "temp_directory": {
+      "type": "string",
+      "description": "Directory for temporary files"
+    },
+    "checkpoint_threshold": {
+      "type": "string",
+      "pattern": "^([1-9][0-9]*)(MB|GB|KB)?$",
+      "default": "16MB",
+      "description": "WAL checkpoint threshold"
+    },
+    "wal_autocheckpoint": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$",
+      "default": "1000",
+      "description": "Number of pages before automatic WAL checkpoint"
+    },
+    "enable_object_cache": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "true",
+      "description": "Enable object cache for better performance"
+    },
+    "enable_external_access": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "true",
+      "description": "Allow access to external files and URLs"
+    },
+    "allow_unsigned_extensions": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "false",
+      "description": "Allow loading unsigned extensions"
+    },
+    "default_order": {
+      "type": "string",
+      "enum": ["ASC", "DESC"],
+      "default": "ASC",
+      "description": "Default ordering for results"
+    },
+    "preserve_insertion_order": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "true",
+      "description": "Preserve row insertion order"
+    },
+    "enable_profiling": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "false",
+      "description": "Enable query profiling"
+    },
+    "enable_progress_bar": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "false",
+      "description": "Show progress bar for long-running queries"
+    },
+    "force_compression": {
+      "type": "string",
+      "enum": ["none", "auto", "uncompressed", "rle", "dictionary", "pfor", "bitpacking", "fsst", "chimp", "patas"],
+      "description": "Force specific compression algorithm"
+    },
+    "experimental_parallel_csv": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "false",
+      "description": "Enable experimental parallel CSV reading"
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "threads": "4",
+      "max_memory": "2GB",
+      "enable_object_cache": "true"
+    },
+    {
+      "access_mode": "READ_ONLY",
+      "threads": "8",
+      "max_memory": "75%",
+      "temp_directory": "/tmp/duckdb"
+    }
+  ]
+}

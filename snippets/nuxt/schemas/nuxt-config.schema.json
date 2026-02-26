@@ -1,0 +1,206 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://nuxt.com/schema/config",
+  "title": "Nuxt Configuration Schema",
+  "description": "Schema for nuxt.config.ts configuration files",
+  "type": "object",
+  "properties": {
+    "ssr": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable server-side rendering"
+    },
+    "target": {
+      "type": "string",
+      "enum": ["static", "server"],
+      "default": "server",
+      "description": "Deployment target"
+    },
+    "head": {
+      "type": "object",
+      "description": "Global head configuration",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Default page title"
+        },
+        "meta": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "content": { "type": "string" },
+              "property": { "type": "string" },
+              "http-equiv": { "type": "string" }
+            }
+          }
+        },
+        "link": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "rel": { "type": "string" },
+              "href": { "type": "string" },
+              "type": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "css": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Global CSS files"
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "array",
+            "items": [
+              { "type": "string" },
+              { "type": "object" }
+            ]
+          }
+        ]
+      },
+      "description": "Nuxt modules to install"
+    },
+    "runtimeConfig": {
+      "type": "object",
+      "description": "Runtime configuration",
+      "properties": {
+        "public": {
+          "type": "object",
+          "description": "Public runtime config (available on client)"
+        }
+      },
+      "additionalProperties": true
+    },
+    "routeRules": {
+      "type": "object",
+      "description": "Route-specific configuration rules",
+      "patternProperties": {
+        "^/.*": {
+          "type": "object",
+          "properties": {
+            "prerender": { "type": "boolean" },
+            "ssr": { "type": "boolean" },
+            "cache": {
+              "type": "object",
+              "properties": {
+                "maxAge": { "type": "number" }
+              }
+            },
+            "redirect": {
+              "type": "object",
+              "properties": {
+                "to": { "type": "string" },
+                "statusCode": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "properties": {
+            "global": { "type": "boolean" },
+            "dirs": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  { "type": "string" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "path": { "type": "string" },
+                      "prefix": { "type": "string" },
+                      "pathPrefix": { "type": "boolean" },
+                      "global": { "type": "boolean" }
+                    },
+                    "required": ["path"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "imports": {
+      "type": "object",
+      "properties": {
+        "autoImport": { "type": "boolean" },
+        "dirs": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "experimental": {
+      "type": "object",
+      "properties": {
+        "asyncContext": { "type": "boolean" },
+        "componentIslands": { "type": "boolean" },
+        "cookieStore": { "type": "boolean" },
+        "crossOriginPrefetch": { "type": "boolean" },
+        "buildCache": { "type": "boolean" },
+        "inlineRouteRules": { "type": "boolean" }
+      }
+    },
+    "typescript": {
+      "type": "object",
+      "properties": {
+        "strict": { "type": "boolean" },
+        "typeCheck": { "type": "boolean" }
+      }
+    },
+    "nitro": {
+      "type": "object",
+      "properties": {
+        "minify": { "type": "boolean" },
+        "compressPublicAssets": { "type": "boolean" },
+        "storage": { "type": "object" }
+      }
+    },
+    "vite": {
+      "type": "object",
+      "description": "Vite configuration"
+    },
+    "build": {
+      "type": "object",
+      "properties": {
+        "transpile": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "devtools": {
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "timeline": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

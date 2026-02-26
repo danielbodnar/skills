@@ -1,0 +1,10 @@
+# Base mise configuration
+# Usage: Copy to project root as .mise.toml
+#
+# Provides minimal tooling defaults for any project.
+
+[tools]
+bun = "latest"
+
+[settings]
+experimental = true

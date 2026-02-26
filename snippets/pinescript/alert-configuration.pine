@@ -1,0 +1,320 @@
+// Pine Script Alert Configuration Examples
+// @version=6
+
+// ===== BASIC ALERT SETUP =====
+indicator("Alert Configuration Examples", shorttitle="Alerts", overlay=true)
+
+// Basic alert conditions
+sma_20 = ta.sma(close, 20)
+sma_50 = ta.sma(close, 50)
+
+// Simple crossover alerts
+alertcondition(ta.crossover(close, sma_20), 
+    title="Price Above SMA20", 
+    message="{{ticker}} price crossed above SMA20 at {{close}}")
+
+alertcondition(ta.crossunder(close, sma_20), 
+    title="Price Below SMA20", 
+    message="{{ticker}} price crossed below SMA20 at {{close}}")
+
+// Moving average crossover alerts
+alertcondition(ta.crossover(sma_20, sma_50), 
+    title="Golden Cross", 
+    message="🟢 GOLDEN CROSS: {{ticker}} SMA20 crossed above SMA50. Current price: {{close}}")
+
+alertcondition(ta.crossunder(sma_20, sma_50), 
+    title="Death Cross", 
+    message="🔴 DEATH CROSS: {{ticker}} SMA20 crossed below SMA50. Current price: {{close}}")
+
+// Plot moving averages
+plot(sma_20, "SMA 20", color.blue, 2)
+plot(sma_50, "SMA 50", color.red, 2)
+
+// ===== OSCILLATOR-BASED ALERTS =====
+// RSI alerts
+rsi = ta.rsi(close, 14)
+rsi_overbought = 70
+rsi_oversold = 30
+
+// RSI threshold alerts
+alertcondition(ta.crossover(rsi, rsi_overbought), 
+    title="RSI Overbought", 
+    message="⚠️ {{ticker}} RSI entered overbought zone ({{rsi}})")
+
+alertcondition(ta.crossunder(rsi, rsi_oversold), 
+    title="RSI Oversold", 
+    message="⚠️ {{ticker}} RSI entered oversold zone ({{rsi}})")
+
+// RSI divergence detection (simplified)
+price_higher = high > high[5]
+rsi_lower = rsi < rsi[5]
+bearish_divergence = price_higher and rsi_lower and rsi > rsi_overbought
+
+price_lower = low < low[5]
+rsi_higher = rsi > rsi[5]
+bullish_divergence = price_lower and rsi_higher and rsi < rsi_oversold
+
+alertcondition(bearish_divergence, 
+    title="Bearish RSI Divergence", 
+    message="📉 BEARISH DIVERGENCE: {{ticker}} price making higher highs while RSI makes lower highs")
+
+alertcondition(bullish_divergence, 
+    title="Bullish RSI Divergence", 
+    message="📈 BULLISH DIVERGENCE: {{ticker}} price making lower lows while RSI makes higher lows")
+
+// ===== VOLUME-BASED ALERTS =====
+// Volume spike detection
+avg_volume = ta.sma(volume, 20)
+volume_multiplier = 2.0
+
+volume_spike = volume > avg_volume * volume_multiplier
+unusual_volume_up = volume_spike and close > open
+unusual_volume_down = volume_spike and close < open
+
+alertcondition(unusual_volume_up, 
+    title="High Volume Bullish", 
+    message="🚀 HIGH VOLUME BULLISH: {{ticker}} volume {{volume}} is {{#volume_ratio}}x normal with green candle")
+
+alertcondition(unusual_volume_down, 
+    title="High Volume Bearish", 
+    message="💥 HIGH VOLUME BEARISH: {{ticker}} volume {{volume}} is {{#volume_ratio}}x normal with red candle")
+
+// ===== BREAKOUT ALERTS =====
+// Support and resistance levels
+lookback = 20
+resistance = ta.highest(high, lookback)[1]
+support = ta.lowest(low, lookback)[1]
+
+// Breakout conditions
+resistance_break = close > resistance and close[1] <= resistance
+support_break = close < support and close[1] >= support
+
+alertcondition(resistance_break, 
+    title="Resistance Breakout", 
+    message="🆙 BREAKOUT: {{ticker}} broke resistance at {{resistance_level}} | Current: {{close}}")
+
+alertcondition(support_break, 
+    title="Support Breakdown", 
+    message="⬇️ BREAKDOWN: {{ticker}} broke support at {{support_level}} | Current: {{close}}")
+
+// ===== BOLLINGER BANDS ALERTS =====
+bb_length = 20
+bb_mult = 2.0
+[bb_middle, bb_upper, bb_lower] = ta.bb(close, bb_length, bb_mult)
+
+// Bollinger Band squeeze detection
+bb_width = (bb_upper - bb_lower) / bb_middle
+bb_squeeze = bb_width < ta.sma(bb_width, 20) * 0.8
+
+// Bollinger Band expansion
+bb_expansion = bb_width > ta.sma(bb_width, 20) * 1.2
+
+alertcondition(bb_squeeze and not bb_squeeze[1], 
+    title="Bollinger Band Squeeze", 
+    message="🤏 BB SQUEEZE: {{ticker}} entering low volatility period - potential breakout incoming")
+
+alertcondition(bb_expansion and not bb_expansion[1], 
+    title="Bollinger Band Expansion", 
+    message="💥 BB EXPANSION: {{ticker}} volatility increasing - trend move starting")
+
+// BB touch alerts
+bb_upper_touch = close >= bb_upper
+bb_lower_touch = close <= bb_lower
+
+alertcondition(bb_upper_touch and not bb_upper_touch[1], 
+    title="BB Upper Band Touch", 
+    message="🔴 {{ticker}} touched upper Bollinger Band - potential reversal or continued strength")
+
+alertcondition(bb_lower_touch and not bb_lower_touch[1], 
+    title="BB Lower Band Touch", 
+    message="🟢 {{ticker}} touched lower Bollinger Band - potential reversal or continued weakness")
+
+// Plot Bollinger Bands
+p1 = plot(bb_upper, "BB Upper", color.red)
+p2 = plot(bb_lower, "BB Lower", color.red)
+p3 = plot(bb_middle, "BB Middle", color.gray)
+fill(p1, p2, color=color.new(color.red, 95))
+
+// ===== PATTERN RECOGNITION ALERTS =====
+// Candlestick patterns (simplified)
+
+// Doji detection
+body_size = math.abs(close - open)
+candle_range = high - low
+doji = body_size <= candle_range * 0.1 and candle_range > ta.atr(14) * 0.5
+
+// Hammer detection
+lower_wick = open > close ? close - low : open - low
+upper_wick = open > close ? high - open : high - close
+hammer = lower_wick > body_size * 2 and upper_wick < body_size and low == ta.lowest(low, 5)
+
+// Shooting star detection
+shooting_star = upper_wick > body_size * 2 and lower_wick < body_size and high == ta.highest(high, 5)
+
+// Engulfing patterns
+bullish_engulf = close > open and close[1] < open[1] and 
+                 close > open[1] and open < close[1] and 
+                 body_size > math.abs(close[1] - open[1])
+
+bearish_engulf = close < open and close[1] > open[1] and 
+                 close < open[1] and open > close[1] and 
+                 body_size > math.abs(close[1] - open[1])
+
+// Pattern alerts
+alertcondition(doji, 
+    title="Doji Pattern", 
+    message="⚖️ DOJI: {{ticker}} formed doji pattern - market indecision")
+
+alertcondition(hammer, 
+    title="Hammer Pattern", 
+    message="🔨 HAMMER: {{ticker}} formed hammer pattern - potential bullish reversal")
+
+alertcondition(shooting_star, 
+    title="Shooting Star Pattern", 
+    message="🌠 SHOOTING STAR: {{ticker}} formed shooting star - potential bearish reversal")
+
+alertcondition(bullish_engulf, 
+    title="Bullish Engulfing", 
+    message="🟢 BULLISH ENGULFING: {{ticker}} bullish engulfing pattern formed")
+
+alertcondition(bearish_engulf, 
+    title="Bearish Engulfing", 
+    message="🔴 BEARISH ENGULFING: {{ticker}} bearish engulfing pattern formed")
+
+// ===== TIME-BASED ALERTS =====
+// Market session alerts
+is_market_open = not na(time(timeframe.period, "0930-1600"))
+market_open = is_market_open and not is_market_open[1]
+market_close = not is_market_open and is_market_open[1]
+
+alertcondition(market_open, 
+    title="Market Open", 
+    message="🔔 MARKET OPEN: {{ticker}} trading session started")
+
+alertcondition(market_close, 
+    title="Market Close", 
+    message="🔔 MARKET CLOSE: {{ticker}} trading session ended")
+
+// End of day alerts
+is_last_hour = not na(time(timeframe.period, "1500-1600"))
+power_hour = is_last_hour and not is_last_hour[1]
+
+alertcondition(power_hour, 
+    title="Power Hour", 
+    message="⏰ POWER HOUR: {{ticker}} entering final trading hour")
+
+// ===== MULTI-CONDITION ALERTS =====
+// Trend confirmation alerts
+uptrend = close > sma_20 and sma_20 > sma_50 and close > close[5]
+downtrend = close < sma_20 and sma_20 < sma_50 and close < close[5]
+trend_change_up = uptrend and not uptrend[1]
+trend_change_down = downtrend and not downtrend[1]
+
+alertcondition(trend_change_up, 
+    title="Uptrend Confirmation", 
+    message="📈 UPTREND: {{ticker}} confirmed uptrend - price above MAs with momentum")
+
+alertcondition(trend_change_down, 
+    title="Downtrend Confirmation", 
+    message="📉 DOWNTREND: {{ticker}} confirmed downtrend - price below MAs with momentum")
+
+// Multi-timeframe confluence
+htf_trend = request.security(syminfo.tickerid, "1D", close > ta.sma(close, 20))
+confluence_bull = uptrend and htf_trend and rsi < 70
+confluence_bear = downtrend and not htf_trend and rsi > 30
+
+alertcondition(confluence_bull, 
+    title="Bullish Confluence", 
+    message="🎯 BULLISH CONFLUENCE: {{ticker}} multiple timeframes aligned bullish")
+
+alertcondition(confluence_bear, 
+    title="Bearish Confluence", 
+    message="🎯 BEARISH CONFLUENCE: {{ticker}} multiple timeframes aligned bearish")
+
+// ===== CUSTOM ALERT MESSAGES WITH FORMATTING =====
+// Advanced message formatting function
+formatAlertMessage(symbol, action, price, indicator_value, timeframe) =>
+    timestamp = str.format("{0,time,medium}", timenow)
+    price_str = str.tostring(price, "#.####")
+    indicator_str = str.tostring(indicator_value, "#.##")
+    
+    message = "🚨 " + action + " SIGNAL 🚨\n" +
+              "Symbol: " + symbol + "\n" +
+              "Price: $" + price_str + "\n" +
+              "Timeframe: " + timeframe + "\n" +
+              "Indicator: " + indicator_str + "\n" +
+              "Time: " + timestamp + "\n" +
+              "Chart: https://www.tradingview.com/chart/?symbol=" + symbol
+    
+    message
+
+// Example usage in alertcondition
+ma_cross_up = ta.crossover(sma_20, sma_50)
+alertcondition(ma_cross_up, 
+    title="Formatted MA Cross", 
+    message=formatAlertMessage(syminfo.ticker, "MA CROSS UP", close, sma_20, timeframe.period))
+
+// ===== ALERT FREQUENCY CONTROL =====
+// Prevent alert spam with time-based filtering
+var float last_alert_time = 0
+min_alert_interval = 300000  // 5 minutes in milliseconds
+
+can_alert = (timenow - last_alert_time) > min_alert_interval
+
+significant_move = math.abs(ta.change(close)) > ta.atr(14) * 1.5
+filtered_alert = significant_move and can_alert
+
+if filtered_alert
+    last_alert_time := timenow
+
+alertcondition(filtered_alert, 
+    title="Significant Move (Filtered)", 
+    message="📊 SIGNIFICANT MOVE: {{ticker}} moved {{change}} points ({{change_percent}}%)")
+
+// ===== WEBHOOK-READY ALERTS =====
+// JSON formatted alert for webhook integration
+webhook_message = '{"symbol":"' + syminfo.ticker + 
+                  '","price":' + str.tostring(close) + 
+                  ',"action":"BUY",' +
+                  '"timestamp":"' + str.format("{0,time,yyyy-MM-dd HH:mm:ss}", timenow) + '",' +
+                  '"rsi":' + str.tostring(rsi) + '}'
+
+webhook_condition = ta.crossover(close, sma_20) and rsi < 60
+
+alertcondition(webhook_condition, 
+    title="Webhook Alert", 
+    message=webhook_message)
+
+// ===== PERFORMANCE MONITORING ALERTS =====
+// Track alert performance
+var int total_alerts = 0
+var int profitable_signals = 0
+
+// Check if previous signal was profitable (simplified)
+signal_given = ta.crossover(rsi, 30)
+check_performance = signal_given[10]  // Check 10 bars later
+price_then = close[10] 
+current_profit = check_performance ? ((close - price_then) / price_then * 100) : na
+
+if not na(current_profit)
+    total_alerts += 1
+    if current_profit > 0
+        profitable_signals += 1
+
+win_rate = total_alerts > 0 ? (profitable_signals / total_alerts * 100) : 0
+
+// Alert with performance stats
+performance_alert = signal_given and total_alerts > 10
+alertcondition(performance_alert, 
+    title="Signal with Stats", 
+    message="📊 SIGNAL: {{ticker}} RSI oversold bounce | Win Rate: " + str.tostring(win_rate, "#.#") + "%")
+
+// Visual indicators for alerts
+plotshape(ma_cross_up, "MA Cross Up", shape.triangleup, location.belowbar, color.green, size=size.small)
+plotshape(resistance_break, "Resistance Break", shape.arrowup, location.belowbar, color.blue, size=size.normal)
+plotshape(bearish_divergence, "Bear Div", shape.xcross, location.abovebar, color.red, size=size.small)
+plotshape(doji, "Doji", shape.diamond, location.abovebar, color.yellow, size=size.tiny)
+
+// Background coloring for alerts
+bgcolor(volume_spike ? color.new(color.purple, 95) : na)
+bgcolor(bb_squeeze ? color.new(color.orange, 98) : na)

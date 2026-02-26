@@ -1,0 +1,530 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "WebExtension Manifest V3",
+  "description": "Schema for WebExtensions Manifest Version 3",
+  "required": ["manifest_version", "name", "version"],
+  "properties": {
+    "manifest_version": {
+      "type": "integer",
+      "const": 3,
+      "description": "Manifest version (must be 3)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 45,
+      "description": "Extension name"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+(\\.\\d+)*$",
+      "description": "Extension version"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 132,
+      "description": "Extension description"
+    },
+    "icons": {
+      "type": "object",
+      "patternProperties": {
+        "^(16|32|48|64|96|128|256)$": {
+          "type": "string",
+          "description": "Path to icon file"
+        }
+      },
+      "description": "Extension icons"
+    },
+    "action": {
+      "type": "object",
+      "description": "Browser action (toolbar button)",
+      "properties": {
+        "default_popup": {
+          "type": "string",
+          "description": "Path to popup HTML file"
+        },
+        "default_title": {
+          "type": "string",
+          "description": "Tooltip text for the action"
+        },
+        "default_icon": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Path to icon file"
+            },
+            {
+              "type": "object",
+              "patternProperties": {
+                "^(16|32|48|64|96|128|256)$": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "background": {
+      "type": "object",
+      "description": "Background script configuration",
+      "properties": {
+        "service_worker": {
+          "type": "string",
+          "description": "Path to service worker script"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["module"],
+          "description": "Script type (ES modules)"
+        }
+      },
+      "required": ["service_worker"]
+    },
+    "content_scripts": {
+      "type": "array",
+      "description": "Content scripts configuration",
+      "items": {
+        "type": "object",
+        "required": ["matches"],
+        "properties": {
+          "matches": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "URL pattern"
+            },
+            "description": "URL patterns where script runs"
+          },
+          "exclude_matches": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "URL patterns to exclude"
+          },
+          "js": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "JavaScript files to inject"
+          },
+          "css": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "CSS files to inject"
+          },
+          "run_at": {
+            "type": "string",
+            "enum": ["document_start", "document_end", "document_idle"],
+            "description": "When to inject the script"
+          },
+          "world": {
+            "type": "string",
+            "enum": ["ISOLATED", "MAIN"],
+            "description": "JavaScript world to run in"
+          },
+          "all_frames": {
+            "type": "boolean",
+            "description": "Run in all frames"
+          },
+          "include_globs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Glob patterns to include"
+          },
+          "exclude_globs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Glob patterns to exclude"
+          }
+        }
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "description": "API permissions",
+      "items": {
+        "type": "string",
+        "enum": [
+          "activeTab",
+          "alarms",
+          "background",
+          "bookmarks",
+          "browsingData",
+          "certificateProvider",
+          "clipboardRead",
+          "clipboardWrite",
+          "contentSettings",
+          "contextMenus",
+          "cookies",
+          "declarativeContent",
+          "declarativeNetRequest",
+          "declarativeNetRequestFeedback",
+          "declarativeNetRequestWithHostAccess",
+          "declarativeWebRequest",
+          "desktopCapture",
+          "displaySource",
+          "dns",
+          "documentScan",
+          "downloads",
+          "enterprise.deviceAttributes",
+          "enterprise.hardwarePlatform",
+          "enterprise.networkingAttributes",
+          "enterprise.platformKeys",
+          "experimental",
+          "fileBrowserHandler",
+          "fileSystemProvider",
+          "fontSettings",
+          "gcm",
+          "geolocation",
+          "history",
+          "identity",
+          "idle",
+          "loginState",
+          "management",
+          "nativeMessaging",
+          "notifications",
+          "offscreen",
+          "pageCapture",
+          "platformKeys",
+          "power",
+          "printerProvider",
+          "privacy",
+          "proxy",
+          "scripting",
+          "search",
+          "sessions",
+          "sidePanel",
+          "storage",
+          "system.cpu",
+          "system.display",
+          "system.memory",
+          "system.storage",
+          "tabCapture",
+          "tabGroups",
+          "tabs",
+          "topSites",
+          "tts",
+          "ttsEngine",
+          "unlimitedStorage",
+          "vpnProvider",
+          "wallpaper",
+          "webAuthenticationProxy",
+          "webNavigation",
+          "webRequest",
+          "webRequestBlocking"
+        ]
+      }
+    },
+    "host_permissions": {
+      "type": "array",
+      "description": "Host permissions (URL patterns)",
+      "items": {
+        "type": "string",
+        "description": "URL pattern or <all_urls>"
+      }
+    },
+    "optional_permissions": {
+      "type": "array",
+      "description": "Optional API permissions",
+      "items": {
+        "type": "string"
+      }
+    },
+    "optional_host_permissions": {
+      "type": "array",
+      "description": "Optional host permissions",
+      "items": {
+        "type": "string"
+      }
+    },
+    "web_accessible_resources": {
+      "type": "array",
+      "description": "Resources accessible by web pages",
+      "items": {
+        "type": "object",
+        "required": ["resources", "matches"],
+        "properties": {
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of resource paths"
+          },
+          "matches": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "URL patterns that can access resources"
+          },
+          "extension_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Extension IDs that can access resources"
+          },
+          "use_dynamic_url": {
+            "type": "boolean",
+            "description": "Whether to use dynamic URLs"
+          }
+        }
+      }
+    },
+    "content_security_policy": {
+      "type": "object",
+      "description": "Content Security Policy",
+      "properties": {
+        "extension_pages": {
+          "type": "string",
+          "description": "CSP for extension pages"
+        },
+        "sandbox": {
+          "type": "string",
+          "description": "CSP for sandboxed pages"
+        }
+      }
+    },
+    "declarative_net_request": {
+      "type": "object",
+      "description": "Declarative Net Request rules",
+      "properties": {
+        "rule_resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "enabled", "path"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Rule resource ID"
+              },
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether rules are enabled"
+              },
+              "path": {
+                "type": "string",
+                "description": "Path to rules JSON file"
+              }
+            }
+          }
+        }
+      }
+    },
+    "externally_connectable": {
+      "type": "object",
+      "description": "External connectivity configuration",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Extension IDs that can connect"
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "URL patterns that can connect"
+        },
+        "accepts_tls_channel_id": {
+          "type": "boolean",
+          "description": "Accept TLS channel ID"
+        }
+      }
+    },
+    "incognito": {
+      "type": "string",
+      "enum": ["spanning", "split", "not_allowed"],
+      "description": "Incognito mode behavior"
+    },
+    "minimum_chrome_version": {
+      "type": "string",
+      "description": "Minimum Chrome version required"
+    },
+    "options_page": {
+      "type": "string",
+      "description": "Path to options page HTML file"
+    },
+    "options_ui": {
+      "type": "object",
+      "description": "Options UI configuration",
+      "properties": {
+        "page": {
+          "type": "string",
+          "description": "Path to options page HTML file"
+        },
+        "open_in_tab": {
+          "type": "boolean",
+          "description": "Open options in new tab"
+        },
+        "browser_style": {
+          "type": "boolean",
+          "description": "Use browser default styling"
+        }
+      },
+      "required": ["page"]
+    },
+    "omnibox": {
+      "type": "object",
+      "description": "Omnibox configuration",
+      "required": ["keyword"],
+      "properties": {
+        "keyword": {
+          "type": "string",
+          "description": "Keyword to trigger omnibox"
+        }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "description": "Keyboard commands",
+      "patternProperties": {
+        "^.+$": {
+          "type": "object",
+          "properties": {
+            "suggested_key": {
+              "type": "object",
+              "properties": {
+                "default": {
+                  "type": "string"
+                },
+                "mac": {
+                  "type": "string"
+                },
+                "windows": {
+                  "type": "string"
+                },
+                "linux": {
+                  "type": "string"
+                },
+                "chromeos": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": {
+              "type": "string",
+              "description": "Command description"
+            },
+            "global": {
+              "type": "boolean",
+              "description": "Global command (works when browser not focused)"
+            }
+          }
+        }
+      }
+    },
+    "side_panel": {
+      "type": "object",
+      "description": "Side panel configuration",
+      "properties": {
+        "default_path": {
+          "type": "string",
+          "description": "Path to side panel HTML file"
+        }
+      }
+    },
+    "devtools_page": {
+      "type": "string",
+      "description": "Path to DevTools page HTML file"
+    },
+    "chrome_url_overrides": {
+      "type": "object",
+      "description": "Chrome URL overrides",
+      "properties": {
+        "newtab": {
+          "type": "string",
+          "description": "New tab page override"
+        },
+        "bookmarks": {
+          "type": "string",
+          "description": "Bookmarks page override"
+        },
+        "history": {
+          "type": "string",
+          "description": "History page override"
+        }
+      }
+    },
+    "homepage_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Extension homepage URL"
+    },
+    "update_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Update server URL"
+    },
+    "version_name": {
+      "type": "string",
+      "description": "Version name (display purposes)"
+    },
+    "short_name": {
+      "type": "string",
+      "maxLength": 12,
+      "description": "Short name for display"
+    },
+    "author": {
+      "type": "string",
+      "description": "Extension author"
+    },
+    "default_locale": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(_[A-Z]{2})?$",
+      "description": "Default locale"
+    },
+    "browser_specific_settings": {
+      "type": "object",
+      "description": "Browser-specific settings",
+      "properties": {
+        "gecko": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Extension ID for Firefox"
+            },
+            "strict_min_version": {
+              "type": "string",
+              "description": "Minimum Firefox version"
+            },
+            "strict_max_version": {
+              "type": "string",
+              "description": "Maximum Firefox version"
+            },
+            "update_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Update URL for Firefox"
+            }
+          }
+        },
+        "edge": {
+          "type": "object",
+          "properties": {
+            "browser_action_next_to_addressbar": {
+              "type": "boolean",
+              "description": "Show browser action next to address bar"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,411 @@
+# TruffleHog GitLab CI Configuration
+# Various configurations for secret scanning in GitLab CI/CD
+
+stages:
+  - security
+  - report
+  - notify
+
+variables:
+  SCAN_PATH: "."
+  TRUFFLEHOG_VERSION: "latest"
+
+# Basic secret scanning job
+security-secrets:
+  stage: security
+  image: alpine:latest
+  allow_failure: false
+  variables:
+    GIT_DEPTH: 0  # Full clone for comprehensive scanning
+  before_script:
+    - apk add --no-cache git curl jq
+    - curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+  script:
+    - trufflehog filesystem "$SCAN_PATH" --results=verified,unknown --fail --json | tee trufflehog-results.json | jq
+  artifacts:
+    when: always
+    paths:
+      - trufflehog-results.json
+    expire_in: 30 days
+    reports:
+      junit: trufflehog-results.json
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Advanced scan with custom configuration
+advanced-security-scan:
+  stage: security
+  image: alpine:latest
+  variables:
+    ENTROPY_THRESHOLD: "3.5"
+    CONCURRENCY: "10"
+  before_script:
+    - apk add --no-cache git curl jq
+    - curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+    - |
+      cat > custom-config.yaml << 'EOF'
+      detectors:
+        - name: GitLabTokenDetector
+          keywords:
+            - gitlab
+            - glpat
+          regex:
+            token: 'glpat-[A-Za-z0-9_-]{20}'
+          verify:
+            - endpoint: $CI_SERVER_URL/api/v4/user
+              headers:
+                - "PRIVATE-TOKEN: {token}"
+          entropy: 3.0
+        - name: HighEntropySecrets
+          keywords:
+            - secret
+            - key
+            - password
+            - token
+          regex:
+            secret: '[A-Za-z0-9+/=]{24,}'
+          entropy: 4.0
+          exclude_words:
+            - example
+            - test
+            - demo
+      EOF
+  script:
+    - |
+      trufflehog filesystem "$SCAN_PATH" \
+        --config=custom-config.yaml \
+        --results=verified,unknown \
+        --filter-entropy="$ENTROPY_THRESHOLD" \
+        --concurrency="$CONCURRENCY" \
+        --json \
+        --fail > advanced-results.json
+  artifacts:
+    when: always
+    paths:
+      - advanced-results.json
+      - custom-config.yaml
+    expire_in: 30 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Git repository scan
+git-repo-scan:
+  stage: security
+  image: alpine:latest
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
+  before_script:
+    - apk add --no-cache git curl jq
+    - curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+  script:
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then
+        # Scan changes in merge request
+        trufflehog git file://. \
+          --since-commit="$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" \
+          --branch="$CI_COMMIT_REF_NAME" \
+          --results=verified,unknown \
+          --json \
+          --fail
+      else
+        # Scan last 10 commits on main branch
+        trufflehog git file://. \
+          --max-depth=10 \
+          --results=verified,unknown \
+          --json \
+          --fail
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Docker image scan
+docker-security-scan:
+  stage: security
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - apk add --no-cache curl
+    - curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+  script:
+    - |
+      if [ -f Dockerfile ]; then
+        docker build -t temp-image:$CI_COMMIT_SHA .
+        trufflehog docker --image=temp-image:$CI_COMMIT_SHA --results=verified,unknown --json
+      else
+        echo "No Dockerfile found, skipping Docker scan"
+      fi
+  rules:
+    - exists:
+        - Dockerfile
+
+# Performance optimized scan
+performance-scan:
+  stage: security
+  image: alpine:latest
+  variables:
+    CONCURRENCY: "20"
+    ARCHIVE_MAX_SIZE: "50MB"
+    ARCHIVE_TIMEOUT: "2m"
+  before_script:
+    - apk add --no-cache git curl jq
+    - curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+    - |
+      # Create exclude patterns for performance
+      cat > exclude-patterns.txt << 'EOF'
+      node_modules/.*
+      vendor/.*
+      .*\.log$
+      .*\.cache$
+      .*\.(zip|tar|gz|jar)$
+      EOF
+  script:
+    - |
+      trufflehog filesystem "$SCAN_PATH" \
+        --exclude-paths=exclude-patterns.txt \
+        --concurrency="$CONCURRENCY" \
+        --archive-max-size="$ARCHIVE_MAX_SIZE" \
+        --archive-timeout="$ARCHIVE_TIMEOUT" \
+        --filter-entropy=3.5 \
+        --results=verified,unknown \
+        --no-update \
+        --json \
+        --fail
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+# Multi-environment scan
+.scan-template: &scan-template
+  stage: security
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git curl jq
+    - curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+  script:
+    - |
+      trufflehog filesystem "$SCAN_PATH" \
+        --results=verified,unknown \
+        --json \
+        --fail > "scan-results-${ENVIRONMENT}.json"
+  artifacts:
+    when: always
+    paths:
+      - scan-results-${ENVIRONMENT}.json
+    expire_in: 30 days
+
+scan-development:
+  <<: *scan-template
+  variables:
+    ENVIRONMENT: "development"
+    SCAN_PATH: "./src"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+scan-staging:
+  <<: *scan-template
+  variables:
+    ENVIRONMENT: "staging"
+    SCAN_PATH: "."
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+
+scan-production:
+  <<: *scan-template
+  variables:
+    ENVIRONMENT: "production"
+    SCAN_PATH: "."
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Comprehensive security report
+security-report:
+  stage: report
+  image: alpine:latest
+  dependencies:
+    - security-secrets
+    - advanced-security-scan
+  before_script:
+    - apk add --no-cache jq
+  script:
+    - |
+      echo "# Security Scan Report" > security-report.md
+      echo "## Pipeline: $CI_PIPELINE_ID" >> security-report.md
+      echo "## Branch: $CI_COMMIT_BRANCH" >> security-report.md
+      echo "## Commit: $CI_COMMIT_SHA" >> security-report.md
+      echo "" >> security-report.md
+      
+      total_secrets=0
+      
+      if [ -f trufflehog-results.json ]; then
+        count=$(jq length trufflehog-results.json 2>/dev/null || echo 0)
+        total_secrets=$((total_secrets + count))
+        echo "### Basic Scan Results: $count secrets found" >> security-report.md
+      fi
+      
+      if [ -f advanced-results.json ]; then
+        count=$(jq length advanced-results.json 2>/dev/null || echo 0)
+        total_secrets=$((total_secrets + count))
+        echo "### Advanced Scan Results: $count secrets found" >> security-report.md
+      fi
+      
+      if [ $total_secrets -gt 0 ]; then
+        echo "## ⚠️ SECURITY ALERT: $total_secrets total secrets detected!" >> security-report.md
+        echo "Please review and remediate immediately." >> security-report.md
+      else
+        echo "## ✅ No secrets detected" >> security-report.md
+      fi
+      
+      cat security-report.md
+  artifacts:
+    paths:
+      - security-report.md
+    expire_in: 30 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Slack notification job
+notify-slack:
+  stage: notify
+  image: alpine:latest
+  dependencies:
+    - security-report
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - |
+      if [ -f security-report.md ]; then
+        # Extract key information
+        branch="$CI_COMMIT_BRANCH"
+        commit="$CI_COMMIT_SHORT_SHA"
+        pipeline="$CI_PIPELINE_URL"
+        
+        # Check if secrets were found
+        if grep -q "SECURITY ALERT" security-report.md; then
+          color="danger"
+          status="🚨 Secrets Detected"
+          secrets_count=$(grep -o '[0-9]\+ total secrets' security-report.md | cut -d' ' -f1)
+        else
+          color="good"
+          status="✅ No Secrets Found"
+          secrets_count="0"
+        fi
+        
+        # Send Slack notification
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"$color\",
+              \"title\": \"TruffleHog Security Scan Results\",
+              \"text\": \"$status\",
+              \"fields\": [
+                {\"title\": \"Repository\", \"value\": \"$CI_PROJECT_NAME\", \"short\": true},
+                {\"title\": \"Branch\", \"value\": \"$branch\", \"short\": true},
+                {\"title\": \"Commit\", \"value\": \"$commit\", \"short\": true},
+                {\"title\": \"Secrets Found\", \"value\": \"$secrets_count\", \"short\": true}
+              ],
+              \"actions\": [{
+                \"type\": \"button\",
+                \"text\": \"View Pipeline\",
+                \"url\": \"$pipeline\"
+              }]
+            }]
+          }" \
+          "$SLACK_WEBHOOK_URL"
+      fi
+  rules:
+    - if: '$SLACK_WEBHOOK_URL && ($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH)'
+
+# Custom verification job
+custom-verification:
+  stage: security
+  image: alpine:latest
+  variables:
+    VERIFICATION_ENDPOINT: "https://internal-verifier.company.com/verify"
+  before_script:
+    - apk add --no-cache git curl jq
+    - curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+  script:
+    - |
+      trufflehog filesystem "$SCAN_PATH" \
+        --verifier="$VERIFICATION_ENDPOINT" \
+        --custom-verifiers-only \
+        --results=verified \
+        --json \
+        --fail
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+# Scheduled comprehensive scan
+nightly-scan:
+  stage: security
+  image: alpine:latest
+  variables:
+    GIT_DEPTH: 0
+    COMPREHENSIVE_SCAN: "true"
+  before_script:
+    - apk add --no-cache git curl jq
+    - curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+  script:
+    - |
+      # Comprehensive nightly scan
+      trufflehog git file://. \
+        --results=verified,unknown,unverified \
+        --json \
+        --print-avg-detector-time \
+        --log-level=2 > nightly-scan-results.json
+      
+      # Generate detailed report
+      echo "# Nightly Security Scan Report - $(date)" > nightly-report.md
+      echo "## Repository: $CI_PROJECT_NAME" >> nightly-report.md
+      echo "## Scan Date: $(date -Iseconds)" >> nightly-report.md
+      echo "" >> nightly-report.md
+      
+      if [ -s nightly-scan-results.json ]; then
+        total=$(jq length nightly-scan-results.json)
+        verified=$(jq '[.[] | select(.Verified == true)] | length' nightly-scan-results.json)
+        unknown=$(jq '[.[] | select(.Verified == false)] | length' nightly-scan-results.json)
+        
+        echo "### Summary" >> nightly-report.md
+        echo "- Total secrets found: $total" >> nightly-report.md
+        echo "- Verified secrets: $verified" >> nightly-report.md
+        echo "- Unknown/Unverified: $unknown" >> nightly-report.md
+        echo "" >> nightly-report.md
+        
+        if [ "$verified" -gt 0 ]; then
+          echo "### ⚠️ Verified Secrets (CRITICAL)" >> nightly-report.md
+          jq -r '.[] | select(.Verified == true) | "- \(.DetectorName): \(.Raw[0:20])... in \(.SourceMetadata.Data.Git.file // .SourceMetadata.Data.Filesystem.file)"' nightly-scan-results.json >> nightly-report.md
+        fi
+      else
+        echo "✅ No secrets detected in nightly scan" >> nightly-report.md
+      fi
+      
+      cat nightly-report.md
+  artifacts:
+    when: always
+    paths:
+      - nightly-scan-results.json
+      - nightly-report.md
+    expire_in: 90 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+# Cleanup job
+cleanup-artifacts:
+  stage: notify
+  image: alpine:latest
+  script:
+    - echo "Security scan pipeline completed"
+    - echo "Artifacts will be available for the configured retention period"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  when: always

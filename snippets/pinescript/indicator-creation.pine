@@ -1,0 +1,371 @@
+// Pine Script Indicator Creation Examples
+// @version=6
+
+// ===== CUSTOM OSCILLATOR INDICATOR =====
+indicator("Custom Oscillator", shorttitle="CustomOsc", format=format.price, precision=2)
+
+// Input parameters
+length = input.int(14, "Length", minval=1)
+smoothing = input.int(3, "Smoothing", minval=1)
+src = input.source(close, "Source")
+
+// Custom oscillator calculation
+price_change = ta.change(src)
+positive_sum = ta.rma(math.max(price_change, 0), length)
+negative_sum = ta.rma(-math.min(price_change, 0), length)
+rsi_raw = 100 - (100 / (1 + positive_sum / negative_sum))
+rsi_smooth = ta.sma(rsi_raw, smoothing)
+
+// Plot the oscillator
+plot(rsi_smooth, "Custom RSI", color.blue, linewidth=2)
+hline(70, "Overbought", color=color.red, linestyle=hline.style_dashed)
+hline(30, "Oversold", color=color.green, linestyle=hline.style_dashed)
+hline(50, "Midline", color=color.gray, linestyle=hline.style_solid)
+
+// Color zones
+bgcolor(rsi_smooth > 70 ? color.new(color.red, 90) : 
+        rsi_smooth < 30 ? color.new(color.green, 90) : na)
+
+// ===== MULTI-TIMEFRAME INDICATOR =====
+indicator("Multi-Timeframe Indicator", shorttitle="MTF", overlay=true)
+
+// Higher timeframe selection
+htf = input.timeframe("1D", "Higher Timeframe")
+show_htf = input.bool(true, "Show Higher Timeframe Data")
+
+// Get higher timeframe data
+htf_close = request.security(syminfo.tickerid, htf, close)
+htf_sma = request.security(syminfo.tickerid, htf, ta.sma(close, 20))
+htf_volume = request.security(syminfo.tickerid, htf, volume)
+
+// Current timeframe indicators
+ctf_sma = ta.sma(close, 20)
+ctf_ema = ta.ema(close, 50)
+
+// Plot current timeframe
+plot(ctf_sma, "SMA 20", color.blue)
+plot(ctf_ema, "EMA 50", color.orange)
+
+// Plot higher timeframe (conditional)
+plot(show_htf ? htf_sma : na, "HTF SMA 20", color.yellow, linewidth=3, style=plot.style_line)
+
+// Multi-timeframe signals
+mtf_bullish = close > ctf_sma and htf_close > htf_sma
+mtf_bearish = close < ctf_sma and htf_close < htf_sma
+
+plotshape(mtf_bullish and not mtf_bullish[1], "MTF Bull", shape.triangleup, 
+          location.belowbar, color.green, size=size.normal)
+plotshape(mtf_bearish and not mtf_bearish[1], "MTF Bear", shape.triangledown, 
+          location.abovebar, color.red, size=size.normal)
+
+// ===== VOLUME PROFILE INDICATOR =====
+indicator("Volume Profile", shorttitle="VP", overlay=true, max_boxes_count=500)
+
+// Input parameters
+profile_length = input.int(100, "Profile Length", minval=10)
+profile_rows = input.int(20, "Profile Rows", minval=5, maxval=100)
+show_poc = input.bool(true, "Show Point of Control")
+show_value_area = input.bool(true, "Show Value Area")
+
+// Calculate volume profile
+var box[] profile_boxes = array.new<box>()
+var line poc_line = na
+var box value_area_box = na
+
+if barstate.islast
+    // Clear previous drawings
+    for i = 0 to array.size(profile_boxes) - 1
+        box.delete(array.get(profile_boxes, i))
+    array.clear(profile_boxes)
+    
+    if not na(poc_line)
+        line.delete(poc_line)
+    if not na(value_area_box)
+        box.delete(value_area_box)
+    
+    // Calculate price levels and volume distribution
+    lookback_start = math.max(0, bar_index - profile_length)
+    highest_price = ta.highest(high, profile_length)
+    lowest_price = ta.lowest(low, profile_length)
+    price_range = highest_price - lowest_price
+    level_size = price_range / profile_rows
+    
+    // Volume distribution array
+    volume_at_price = array.new<float>(profile_rows, 0.0)
+    max_volume = 0.0
+    poc_level = 0
+    
+    // Calculate volume for each price level
+    for i = 0 to profile_length - 1
+        if bar_index - i >= 0
+            bar_high = high[i]
+            bar_low = low[i]
+            bar_volume = volume[i]
+            
+            // Distribute volume across price levels within the bar's range
+            start_level = math.floor((bar_low - lowest_price) / level_size)
+            end_level = math.floor((bar_high - lowest_price) / level_size)
+            
+            for level = math.max(0, start_level) to math.min(profile_rows - 1, end_level)
+                current_vol = array.get(volume_at_price, level)
+                new_vol = current_vol + bar_volume / (end_level - start_level + 1)
+                array.set(volume_at_price, level, new_vol)
+                
+                if new_vol > max_volume
+                    max_volume := new_vol
+                    poc_level := level
+    
+    // Draw volume profile
+    max_width = 50  // Maximum width in bars
+    for i = 0 to profile_rows - 1
+        level_volume = array.get(volume_at_price, i)
+        level_price = lowest_price + i * level_size
+        
+        if level_volume > 0
+            box_width = math.round(max_width * level_volume / max_volume)
+            level_color = i == poc_level ? color.red : color.blue
+            
+            profile_box = box.new(
+                left=bar_index - box_width, 
+                top=level_price + level_size, 
+                right=bar_index, 
+                bottom=level_price,
+                bgcolor=color.new(level_color, 80),
+                border_color=level_color,
+                border_width=1
+            )
+            array.push(profile_boxes, profile_box)
+    
+    // Draw Point of Control
+    if show_poc
+        poc_price = lowest_price + poc_level * level_size
+        poc_line := line.new(
+            x1=bar_index - profile_length, y1=poc_price,
+            x2=bar_index, y2=poc_price,
+            color=color.red, width=2, style=line.style_solid
+        )
+    
+    // Calculate and draw Value Area (70% of total volume)
+    if show_value_area
+        total_volume = array.sum(volume_at_price)
+        value_area_volume = total_volume * 0.7
+        
+        // Find value area boundaries
+        accumulated_volume = array.get(volume_at_price, poc_level)
+        upper_level = poc_level
+        lower_level = poc_level
+        
+        while accumulated_volume < value_area_volume and 
+              (upper_level < profile_rows - 1 or lower_level > 0)
+            
+            upper_vol = upper_level < profile_rows - 1 ? array.get(volume_at_price, upper_level + 1) : 0
+            lower_vol = lower_level > 0 ? array.get(volume_at_price, lower_level - 1) : 0
+            
+            if upper_vol > lower_vol and upper_level < profile_rows - 1
+                upper_level += 1
+                accumulated_volume += upper_vol
+            else if lower_level > 0
+                lower_level -= 1
+                accumulated_volume += lower_vol
+            else if upper_level < profile_rows - 1
+                upper_level += 1
+                accumulated_volume += upper_vol
+            else
+                break
+        
+        // Draw value area
+        va_high = lowest_price + upper_level * level_size + level_size
+        va_low = lowest_price + lower_level * level_size
+        
+        value_area_box := box.new(
+            left=bar_index - profile_length, top=va_high,
+            right=bar_index, bottom=va_low,
+            bgcolor=color.new(color.yellow, 95),
+            border_color=color.yellow,
+            border_width=1
+        )
+
+// ===== MARKET STRUCTURE INDICATOR =====
+indicator("Market Structure", shorttitle="MS", overlay=true, max_labels_count=100)
+
+// Swing detection parameters
+swing_length = input.int(10, "Swing Length", minval=3)
+show_levels = input.bool(true, "Show Support/Resistance Levels")
+show_structure = input.bool(true, "Show Market Structure")
+
+// Detect swing highs and lows
+swing_high = ta.pivothigh(high, swing_length, swing_length)
+swing_low = ta.pivotlow(low, swing_length, swing_length)
+
+// Track market structure
+var float[] swing_highs = array.new<float>()
+var float[] swing_lows = array.new<float>()
+var int[] swing_high_bars = array.new<int>()
+var int[] swing_low_bars = array.new<int>()
+
+// Store swing points
+if not na(swing_high)
+    array.push(swing_highs, swing_high)
+    array.push(swing_high_bars, bar_index - swing_length)
+    
+    // Keep only recent swings
+    if array.size(swing_highs) > 10
+        array.shift(swing_highs)
+        array.shift(swing_high_bars)
+
+if not na(swing_low)
+    array.push(swing_lows, swing_low)
+    array.push(swing_low_bars, bar_index - swing_length)
+    
+    // Keep only recent swings
+    if array.size(swing_lows) > 10
+        array.shift(swing_lows)
+        array.shift(swing_low_bars)
+
+// Determine market structure
+var string market_trend = "Neutral"
+
+if array.size(swing_highs) >= 2 and array.size(swing_lows) >= 2
+    latest_high = array.get(swing_highs, array.size(swing_highs) - 1)
+    prev_high = array.get(swing_highs, array.size(swing_highs) - 2)
+    latest_low = array.get(swing_lows, array.size(swing_lows) - 1)
+    prev_low = array.get(swing_lows, array.size(swing_lows) - 2)
+    
+    // Higher highs and higher lows = uptrend
+    if latest_high > prev_high and latest_low > prev_low
+        market_trend := "Uptrend"
+    // Lower highs and lower lows = downtrend
+    else if latest_high < prev_high and latest_low < prev_low
+        market_trend := "Downtrend"
+    else
+        market_trend := "Sideways"
+
+// Plot swing points
+plotshape(swing_high, "Swing High", shape.triangledown, location.abovebar, 
+          color.red, size=size.small, offset=-swing_length)
+plotshape(swing_low, "Swing Low", shape.triangleup, location.belowbar, 
+          color.green, size=size.small, offset=-swing_length)
+
+// Draw support and resistance levels
+var line[] support_lines = array.new<line>()
+var line[] resistance_lines = array.new<line>()
+
+if show_levels and barstate.islast
+    // Clear previous lines
+    for i = 0 to array.size(support_lines) - 1
+        line.delete(array.get(support_lines, i))
+    for i = 0 to array.size(resistance_lines) - 1
+        line.delete(array.get(resistance_lines, i))
+    array.clear(support_lines)
+    array.clear(resistance_lines)
+    
+    // Draw recent swing levels
+    if array.size(swing_lows) > 0
+        for i = 0 to math.min(4, array.size(swing_lows) - 1)
+            level = array.get(swing_lows, array.size(swing_lows) - 1 - i)
+            bar_idx = array.get(swing_low_bars, array.size(swing_low_bars) - 1 - i)
+            
+            support_line = line.new(
+                x1=bar_idx, y1=level,
+                x2=bar_index, y2=level,
+                color=color.green, width=1, style=line.style_dashed
+            )
+            array.push(support_lines, support_line)
+    
+    if array.size(swing_highs) > 0
+        for i = 0 to math.min(4, array.size(swing_highs) - 1)
+            level = array.get(swing_highs, array.size(swing_highs) - 1 - i)
+            bar_idx = array.get(swing_high_bars, array.size(swing_high_bars) - 1 - i)
+            
+            resistance_line = line.new(
+                x1=bar_idx, y1=level,
+                x2=bar_index, y2=level,
+                color=color.red, width=1, style=line.style_dashed
+            )
+            array.push(resistance_lines, resistance_line)
+
+// Display market structure info
+var table structure_table = table.new(position.top_left, 2, 3, bgcolor=color.white, border_width=1)
+
+if barstate.islast
+    table.cell(structure_table, 0, 0, "Market Structure", text_color=color.black)
+    table.cell(structure_table, 1, 0, market_trend, 
+               text_color=market_trend == "Uptrend" ? color.green : 
+                         market_trend == "Downtrend" ? color.red : color.gray)
+    
+    table.cell(structure_table, 0, 1, "Recent High", text_color=color.black)
+    recent_high = array.size(swing_highs) > 0 ? array.get(swing_highs, array.size(swing_highs) - 1) : na
+    table.cell(structure_table, 1, 1, not na(recent_high) ? str.tostring(recent_high, "#.##") : "N/A", 
+               text_color=color.black)
+    
+    table.cell(structure_table, 0, 2, "Recent Low", text_color=color.black)
+    recent_low = array.size(swing_lows) > 0 ? array.get(swing_lows, array.size(swing_lows) - 1) : na
+    table.cell(structure_table, 1, 2, not na(recent_low) ? str.tostring(recent_low, "#.##") : "N/A", 
+               text_color=color.black)
+
+// ===== FIBONACCI RETRACEMENT INDICATOR =====
+indicator("Auto Fibonacci", shorttitle="AutoFib", overlay=true, max_lines_count=20)
+
+// Parameters
+lookback = input.int(50, "Lookback Period", minval=10)
+show_levels = input.bool(true, "Show Fibonacci Levels")
+extend_right = input.bool(true, "Extend Lines Right")
+
+// Fibonacci levels
+fib_levels = array.from(0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0)
+fib_colors = array.from(color.gray, color.green, color.blue, color.yellow, color.orange, color.red, color.purple)
+
+var line[] fib_lines = array.new<line>()
+
+// Find significant swing high and low
+highest = ta.highest(high, lookback)
+lowest = ta.lowest(low, lookback)
+highest_bar = ta.highestbars(high, lookback)
+lowest_bar = ta.lowestbars(low, lookback)
+
+// Draw Fibonacci retracement
+if show_levels and barstate.islast
+    // Clear previous lines
+    for i = 0 to array.size(fib_lines) - 1
+        line.delete(array.get(fib_lines, i))
+    array.clear(fib_lines)
+    
+    if not na(highest) and not na(lowest) and highest != lowest
+        // Determine trend direction
+        uptrend = highest_bar < lowest_bar  // High came before low
+        
+        swing_high = uptrend ? highest : lowest
+        swing_low = uptrend ? lowest : highest
+        swing_range = swing_high - swing_low
+        
+        high_bar = bar_index + (uptrend ? highest_bar : lowest_bar)
+        low_bar = bar_index + (uptrend ? lowest_bar : highest_bar)
+        
+        // Draw fibonacci levels
+        for i = 0 to array.size(fib_levels) - 1
+            level_ratio = array.get(fib_levels, i)
+            level_price = swing_low + swing_range * level_ratio
+            level_color = array.get(fib_colors, i)
+            
+            start_bar = uptrend ? (level_ratio <= 0.5 ? high_bar : low_bar) : 
+                                 (level_ratio <= 0.5 ? low_bar : high_bar)
+            end_bar = extend_right ? bar_index + 20 : bar_index
+            
+            fib_line = line.new(
+                x1=start_bar, y1=level_price,
+                x2=end_bar, y2=level_price,
+                color=level_color, width=1, 
+                style=level_ratio == 0.5 ? line.style_solid : line.style_dashed
+            )
+            array.push(fib_lines, fib_line)
+            
+            // Add level labels
+            if barstate.islast
+                label.new(
+                    x=end_bar - 10, y=level_price,
+                    text=str.tostring(level_ratio, "#.###") + " (" + str.tostring(level_price, "#.##") + ")",
+                    color=color.new(level_color, 80),
+                    textcolor=color.white,
+                    style=label.style_label_left,
+                    size=size.small
+                )

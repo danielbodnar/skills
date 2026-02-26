@@ -1,0 +1,394 @@
+# ast-grep Rule Configuration Examples
+
+# ==============================================
+# Basic Rule Structure
+# ==============================================
+
+id: no-console-log
+language: JavaScript
+rule:
+  pattern: console.log($$$ARGS)
+message: Use logger instead of console.log
+severity: warning
+fix: logger.log($$$ARGS)
+
+---
+
+# ==============================================
+# Atomic Rules
+# ==============================================
+
+# Pattern-based rule
+id: pattern-example
+language: TypeScript
+rule:
+  pattern: const $VAR = $VALUE
+message: Found variable declaration
+
+---
+
+# Kind-based rule
+id: kind-example
+language: JavaScript
+rule:
+  kind: function_declaration
+message: Found function declaration
+
+---
+
+# Regex-based rule
+id: regex-example
+language: JavaScript
+rule:
+  regex: '^use[A-Z]'
+message: Found React Hook
+
+---
+
+# ==============================================
+# Relational Rules
+# ==============================================
+
+# Inside rule
+id: inside-example
+language: JavaScript
+rule:
+  pattern: console.log($MSG)
+  inside:
+    kind: function_declaration
+message: Console.log found inside function
+
+---
+
+# Has rule
+id: has-example
+language: TypeScript
+rule:
+  kind: function_declaration
+  has:
+    pattern: await $_
+message: Function contains await
+
+---
+
+# Follows rule
+id: follows-example
+language: JavaScript
+rule:
+  pattern: console.log('hello')
+  follows:
+    pattern: console.log('world')
+message: Hello follows world
+
+---
+
+# Precedes rule
+id: precedes-example
+language: JavaScript
+rule:
+  pattern: const $VAR = $VALUE
+  precedes:
+    pattern: console.log($VAR)
+message: Variable used after declaration
+
+---
+
+# ==============================================
+# Composite Rules
+# ==============================================
+
+# All rule (AND logic)
+id: all-example
+language: TypeScript
+rule:
+  all:
+    - kind: call_expression
+    - pattern: fetch($URL)
+    - inside:
+        kind: async_function
+message: Fetch call in async function
+
+---
+
+# Any rule (OR logic)
+id: any-example
+language: JavaScript
+rule:
+  any:
+    - pattern: console.log($MSG)
+    - pattern: console.warn($MSG)
+    - pattern: console.error($MSG)
+message: Console method call
+fix: logger.log($MSG)
+
+---
+
+# Not rule (negation)
+id: not-example
+language: TypeScript
+rule:
+  pattern: function $NAME($$$ARGS) { $$$BODY }
+  not:
+    has:
+      pattern: return $_
+message: Function without return statement
+
+---
+
+# ==============================================
+# Complex Rules with Constraints
+# ==============================================
+
+id: react-hook-constraint
+language: TypeScript
+rule:
+  pattern: const [$STATE, $SETTER] = $HOOK($$$ARGS)
+constraints:
+  HOOK:
+    regex: '^use[A-Z]'
+  STATE:
+    regex: '^[a-z]'
+message: React hook usage
+severity: info
+
+---
+
+# ==============================================
+# Rules with Transformations
+# ==============================================
+
+id: modernize-functions
+language: JavaScript
+rule:
+  pattern: function $NAME($$$ARGS) { $$$BODY }
+transform:
+  ARROW_BODY:
+    replace:
+      source: $$$BODY
+      replace: '^return\s+'
+      by: ''
+fix: const $NAME = ($$$ARGS) => $ARROW_BODY
+
+---
+
+# ==============================================
+# Rules with Rewriters
+# ==============================================
+
+id: barrel-import-rewrite
+language: TypeScript
+rule:
+  pattern: import {$$$IDENTS} from './barrel'
+rewriters:
+- id: individual-import
+  rule:
+    pattern: $IDENT
+    kind: identifier
+  fix: import $IDENT from './barrel/$IDENT'
+transform:
+  IMPORTS:
+    rewrite:
+      rewriters: [individual-import]
+      source: $$$IDENTS
+      joinBy: "\n"
+fix: $IMPORTS
+
+---
+
+# ==============================================
+# Utility Rules
+# ==============================================
+
+id: utility-example
+language: JavaScript
+utils:
+  isLiteral:
+    any:
+      - kind: string
+      - kind: number
+      - kind: boolean
+      - kind: null
+  isFunction:
+    any:
+      - kind: function_declaration
+      - kind: arrow_function
+      - kind: function_expression
+rule:
+  all:
+    - matches: isFunction
+    - has:
+        matches: isLiteral
+message: Function returns literal value
+
+---
+
+# ==============================================
+# File Filtering Rules
+# ==============================================
+
+id: typescript-only
+language: TypeScript
+files:
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+ignores:
+  - "src/**/*.test.ts"
+  - "src/**/*.spec.ts"
+  - "node_modules/**"
+rule:
+  pattern: any
+message: TypeScript file rule
+
+---
+
+# ==============================================
+# Security Rules
+# ==============================================
+
+id: no-eval
+language: JavaScript
+rule:
+  pattern: eval($CODE)
+message: Do not use eval! Dangerous!
+severity: error
+url: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval#never_use_eval!
+
+---
+
+id: sql-injection-risk
+language: JavaScript
+rule:
+  pattern: query($SQL)
+  inside:
+    pattern: function $FUNC($$$PARAMS) { $$$BODY }
+constraints:
+  SQL:
+    regex: '^\s*["`''].+\+.+["`'']'
+message: Potential SQL injection risk
+severity: error
+note: |
+  Concatenating user input directly into SQL queries can lead to SQL injection.
+  Use parameterized queries instead.
+
+---
+
+# ==============================================
+# Performance Rules
+# ==============================================
+
+id: no-sync-in-async
+language: JavaScript
+rule:
+  pattern: $SYNC_METHOD($$$ARGS)
+  inside:
+    any:
+      - kind: async_function
+      - pattern: async function $NAME($$$PARAMS) { $$$BODY }
+constraints:
+  SYNC_METHOD:
+    regex: 'Sync$'
+message: Avoid synchronous methods in async functions
+severity: warning
+
+---
+
+# ==============================================
+# Testing Rules
+# ==============================================
+
+id: no-focused-tests
+language: JavaScript
+rule:
+  any:
+    - pattern: describe.only($$$)
+    - pattern: it.only($$$)
+    - pattern: test.only($$$)
+    - pattern: fit($$$)
+    - pattern: fdescribe($$$)
+message: Remove focused test
+severity: error
+fix: ''
+
+---
+
+# ==============================================
+# React-Specific Rules
+# ==============================================
+
+id: exhaustive-deps
+language: TypeScript
+rule:
+  pattern: useEffect($CALLBACK, [$$$DEPS])
+  inside:
+    kind: function_declaration
+message: Verify useEffect dependencies are exhaustive
+severity: warning
+
+---
+
+id: no-array-index-key
+language: TypeScript
+rule:
+  pattern: $ARRAY.map(($ITEM, $INDEX) => <$COMPONENT key={$INDEX} />)
+message: Avoid using array index as React key
+severity: warning
+fix: $ARRAY.map(($ITEM, $INDEX) => <$COMPONENT key={$ITEM.id} />)
+
+---
+
+# ==============================================
+# Code Quality Rules
+# ==============================================
+
+id: prefer-const
+language: JavaScript
+rule:
+  pattern: let $VAR = $VALUE
+  not:
+    precedes:
+      pattern: $VAR = $_
+      stopBy: end
+message: Use const for variables that are never reassigned
+fix: const $VAR = $VALUE
+
+---
+
+id: no-unused-vars
+language: TypeScript
+rule:
+  pattern: const $VAR = $VALUE
+  not:
+    precedes:
+      any:
+        - pattern: $VAR
+        - has:
+            pattern: $VAR
+      stopBy: end
+message: Unused variable
+severity: warning
+fix: ''
+
+---
+
+# ==============================================
+# API Migration Rules
+# ==============================================
+
+id: migrate-moment-to-dayjs
+language: JavaScript
+rule:
+  any:
+    - pattern: moment($$$ARGS)
+    - pattern: moment().$METHOD($$$ARGS)
+message: Migrate from moment.js to day.js
+fix: dayjs($$$ARGS)
+
+---
+
+id: update-deprecated-api
+language: TypeScript
+rule:
+  pattern: oldAPI.$METHOD($$$ARGS)
+message: Use new API instead of deprecated oldAPI
+fix: newAPI.$METHOD($$$ARGS)
+url: https://docs.example.com/migration-guide

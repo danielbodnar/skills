@@ -1,0 +1,200 @@
+// Basic Pine Script Usage Examples
+// @version=6
+
+// ===== BASIC INDICATOR EXAMPLE =====
+indicator("Basic Usage Examples", overlay = true, shorttitle = "Basic")
+
+// Simple Moving Average
+length = input.int(20, title="MA Length", minval=1)
+ma = ta.sma(close, length)
+plot(ma, title="SMA", color=color.blue, linewidth=2)
+
+// Price-based conditions
+bullish = close > ma
+bearish = close < ma
+
+// Visual alerts
+plotshape(ta.crossover(close, ma), "Bullish Cross", shape.triangleup, location.belowbar, color.green)
+plotshape(ta.crossunder(close, ma), "Bearish Cross", shape.triangledown, location.abovebar, color.red)
+
+// Background coloring
+bgcolor(bullish ? color.new(color.green, 90) : bearish ? color.new(color.red, 90) : na)
+
+// ===== BASIC VARIABLES AND DATA TYPES =====
+// Boolean
+var bool isUptrend = na
+isUptrend := close > close[10]
+
+// Integer
+var int barCount = 0
+barCount += 1
+
+// Float
+highestHigh = ta.highest(high, 20)
+lowestLow = ta.lowest(low, 20)
+
+// String
+var string trendDirection = na
+trendDirection := isUptrend ? "Up" : "Down"
+
+// Color
+dynamicColor = close > open ? color.green : color.red
+
+// ===== BUILT-IN VARIABLES =====
+// Price data
+currentOpen = open
+currentHigh = high
+currentLow = low
+currentClose = close
+currentVolume = volume
+
+// Typical price calculations
+hl2Price = hl2        // (high + low) / 2
+hlc3Price = hlc3      // (high + low + close) / 3
+ohlc4Price = ohlc4    // (open + high + low + close) / 4
+
+// Time and bar information
+currentTime = time
+barIndex = bar_index
+isLastBar = barstate.islast
+isRealtime = barstate.isrealtime
+isNewBar = barstate.isnew
+
+// ===== BASIC TECHNICAL INDICATORS =====
+// Moving Averages
+sma20 = ta.sma(close, 20)
+ema20 = ta.ema(close, 20)
+wma20 = ta.wma(close, 20)
+vwma20 = ta.vwma(close, volume, 20)
+
+// Oscillators
+rsi14 = ta.rsi(close, 14)
+stoch = ta.stoch(close, high, low, 14)
+[macdLine, signalLine, histogram] = ta.macd(close, 12, 26, 9)
+
+// Volatility
+atr14 = ta.atr(14)
+bb_length = 20
+bb_mult = 2.0
+[bb_middle, bb_upper, bb_lower] = ta.bb(close, bb_length, bb_mult)
+
+// Volume indicators
+obv = ta.obv
+mfi14 = ta.mfi(hlc3, volume, 14)
+
+// ===== BASIC PLOTTING =====
+// Simple line plots
+plot(sma20, "SMA 20", color.blue)
+plot(ema20, "EMA 20", color.orange)
+
+// Histogram plot
+plot(histogram, "MACD Histogram", color.gray, style=plot.style_histogram)
+
+// Area fill between two lines
+fill(plot(bb_upper), plot(bb_lower), color=color.new(color.gray, 80), title="BB Fill")
+
+// Conditional plotting
+plot(rsi14 > 70 ? rsi14 : na, "RSI Overbought", color.red, linewidth=3)
+plot(rsi14 < 30 ? rsi14 : na, "RSI Oversold", color.green, linewidth=3)
+
+// ===== BASIC ALERTS =====
+// Simple alert conditions
+alertcondition(ta.crossover(close, sma20), title="Price Above SMA", message="Price crossed above SMA")
+alertcondition(ta.crossunder(close, sma20), title="Price Below SMA", message="Price crossed below SMA")
+alertcondition(rsi14 > 70, title="RSI Overbought", message="RSI is overbought")
+alertcondition(rsi14 < 30, title="RSI Oversold", message="RSI is oversold")
+
+// ===== BASIC INPUT FUNCTIONS =====
+// Different input types
+boolInput = input.bool(true, "Show Signals")
+intInput = input.int(14, "Period", minval=1, maxval=100)
+floatInput = input.float(2.0, "Multiplier", minval=0.1, maxval=10.0, step=0.1)
+stringInput = input.string("SMA", "MA Type", options=["SMA", "EMA", "WMA"])
+colorInput = input.color(color.blue, "Line Color")
+sourceInput = input.source(close, "Price Source")
+
+// ===== BASIC CONDITIONAL LOGIC =====
+// If-else statements
+ma_type = if stringInput == "SMA"
+    ta.sma(sourceInput, intInput)
+else if stringInput == "EMA"
+    ta.ema(sourceInput, intInput)
+else
+    ta.wma(sourceInput, intInput)
+
+// Ternary operator
+trend_color = close > ma_type ? color.green : color.red
+
+// Switch statement (Pine Script v5+)
+ma_value = switch stringInput
+    "SMA" => ta.sma(sourceInput, intInput)
+    "EMA" => ta.ema(sourceInput, intInput)
+    "WMA" => ta.wma(sourceInput, intInput)
+    => ta.sma(sourceInput, intInput)  // default
+
+// ===== BASIC ARRAY OPERATIONS =====
+// Create and manage arrays
+var float[] priceArray = array.new<float>()
+
+// Add values to array
+if barstate.isconfirmed
+    array.push(priceArray, close)
+    
+    // Keep array size manageable
+    if array.size(priceArray) > 100
+        array.shift(priceArray)
+
+// Access array values
+latestPrice = array.size(priceArray) > 0 ? array.get(priceArray, array.size(priceArray) - 1) : na
+oldestPrice = array.size(priceArray) > 0 ? array.get(priceArray, 0) : na
+
+// ===== BASIC FUNCTIONS =====
+// User-defined function
+calcPercentChange(currentPrice, previousPrice) =>
+    ((currentPrice - previousPrice) / previousPrice) * 100
+
+// Function with default parameters
+calcMA(src, len, maType = "SMA") =>
+    switch maType
+        "SMA" => ta.sma(src, len)
+        "EMA" => ta.ema(src, len)
+        "WMA" => ta.wma(src, len)
+
+// Use the functions
+priceChange = calcPercentChange(close, close[1])
+customMA = calcMA(close, 20, "EMA")
+
+// ===== BASIC LABELS AND ANNOTATIONS =====
+// Create labels on specific conditions
+if ta.crossover(close, ma)
+    label.new(bar_index, low, "BUY", 
+              color=color.green, 
+              textcolor=color.white, 
+              style=label.style_label_up)
+
+if ta.crossunder(close, ma)
+    label.new(bar_index, high, "SELL", 
+              color=color.red, 
+              textcolor=color.white, 
+              style=label.style_label_down)
+
+// ===== BASIC TABLE DISPLAY =====
+// Create a table for displaying information
+var table infoTable = table.new(position.top_right, 2, 5, bgcolor=color.white, border_width=1)
+
+if barstate.islast
+    table.cell(infoTable, 0, 0, "Symbol", text_color=color.black)
+    table.cell(infoTable, 1, 0, syminfo.ticker, text_color=color.black)
+    
+    table.cell(infoTable, 0, 1, "Price", text_color=color.black)
+    table.cell(infoTable, 1, 1, str.tostring(close, "#.##"), text_color=color.black)
+    
+    table.cell(infoTable, 0, 2, "Volume", text_color=color.black)
+    table.cell(infoTable, 1, 2, str.tostring(volume, "#"), text_color=color.black)
+    
+    table.cell(infoTable, 0, 3, "RSI", text_color=color.black)
+    table.cell(infoTable, 1, 3, str.tostring(rsi14, "#.#"), text_color=color.black)
+    
+    table.cell(infoTable, 0, 4, "Trend", text_color=color.black)
+    table.cell(infoTable, 1, 4, trendDirection, 
+               text_color=isUptrend ? color.green : color.red)

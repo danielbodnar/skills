@@ -1,0 +1,67 @@
+# clippy.toml - Clippy configuration for cargo-generate templates
+
+# Increase thresholds for complex projects
+too-many-arguments-threshold = 8
+type-complexity-threshold = 250
+single-char-lifetime-names-threshold = 4
+trivial-copy-size-limit = 64
+
+# Enable additional lints
+enum-variant-names-threshold = 3
+cognitive-complexity-threshold = 30
+single-char-lifetime-names-threshold = 4
+
+# Avoid false positives in generated code
+avoid-breaking-exported-api = false
+
+# Allow certain patterns common in templates
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true
+
+# Custom lint configuration
+warn = [
+    "clippy::all",
+    "clippy::pedantic", 
+    "clippy::nursery",
+    "clippy::cargo"
+]
+
+allow = [
+    # Allow some pedantic lints that are too strict for templates
+    "clippy::module_name_repetitions",
+    "clippy::similar_names",
+    "clippy::too_many_lines",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::cast_possible_wrap",
+    "clippy::missing_errors_doc",
+    "clippy::missing_panics_doc",
+    
+    # Allow in template code
+    "clippy::missing_docs_in_private_items",
+    "clippy::implicit_return",
+    "clippy::question_mark_used",
+    
+    # Cargo lints that may not apply to templates
+    "clippy::cargo_common_metadata",
+    "clippy::multiple_crate_versions"
+]
+
+deny = [
+    # Security and correctness
+    "clippy::mem_forget",
+    "clippy::mem_replace_with_uninit",
+    "clippy::panic",
+    "clippy::unreachable",
+    "clippy::unwrap_used",
+    "clippy::expect_used",
+    
+    # Performance
+    "clippy::inefficient_to_string",
+    "clippy::string_add",
+    "clippy::string_add_assign",
+    
+    # Style consistency
+    "clippy::enum_glob_use",
+    "clippy::wildcard_imports"
+]

@@ -1,0 +1,374 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://usage.jdx.dev/schemas/usage-spec.json",
+  "title": "Usage CLI Specification",
+  "description": "JSON Schema for Usage CLI specification files (.usage.kdl)",
+  "type": "object",
+  "properties": {
+    "min_usage_version": {
+      "type": "string",
+      "description": "Minimum version of Usage CLI required",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Friendly name for the CLI"
+    },
+    "bin": {
+      "type": "string",
+      "description": "Name of the binary executable"
+    },
+    "about": {
+      "type": "string",
+      "description": "Short description of the CLI"
+    },
+    "long_about": {
+      "type": "string",
+      "description": "Detailed description of the CLI"
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the CLI"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author of the CLI"
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier"
+    },
+    "before_help": {
+      "type": "string",
+      "description": "Text shown before help (-h)"
+    },
+    "after_help": {
+      "type": "string",
+      "description": "Text shown after help (-h)"
+    },
+    "before_long_help": {
+      "type": "string",
+      "description": "Text shown before long help (--help)"
+    },
+    "after_long_help": {
+      "type": "string",
+      "description": "Text shown after long help (--help)"
+    },
+    "source_code_link_template": {
+      "type": "string",
+      "description": "Template for generating source code links in documentation"
+    },
+    "config_file": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Path to configuration file"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Path to configuration file"
+            },
+            "findup": {
+              "type": "boolean",
+              "description": "Search for config file in parent directories",
+              "default": false
+            },
+            "mode": {
+              "type": "string",
+              "description": "File permissions mode",
+              "pattern": "^0o[0-7]{3}$"
+            }
+          },
+          "required": ["path"]
+        }
+      ]
+    },
+    "flags": {
+      "type": "array",
+      "description": "Global flags available to all commands",
+      "items": {
+        "$ref": "#/definitions/flag"
+      }
+    },
+    "args": {
+      "type": "array",
+      "description": "Positional arguments",
+      "items": {
+        "$ref": "#/definitions/arg"
+      }
+    },
+    "commands": {
+      "type": "array",
+      "description": "Subcommands",
+      "items": {
+        "$ref": "#/definitions/command"
+      }
+    },
+    "examples": {
+      "type": "array",
+      "description": "Usage examples",
+      "items": {
+        "$ref": "#/definitions/example"
+      }
+    }
+  },
+  "definitions": {
+    "flag": {
+      "type": "object",
+      "properties": {
+        "short": {
+          "type": "string",
+          "description": "Short flag (e.g., -f)",
+          "pattern": "^-[a-zA-Z]$"
+        },
+        "long": {
+          "type": "string",
+          "description": "Long flag (e.g., --force)",
+          "pattern": "^--[a-zA-Z][a-zA-Z0-9-]*$"
+        },
+        "help": {
+          "type": "string",
+          "description": "Help text for the flag"
+        },
+        "long_help": {
+          "type": "string",
+          "description": "Detailed help text for the flag"
+        },
+        "value_name": {
+          "type": "string",
+          "description": "Name for the flag value (e.g., <file>)"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment variable to read value from"
+        },
+        "config": {
+          "type": "string",
+          "description": "Configuration file path to read value from"
+        },
+        "default": {
+          "type": "string",
+          "description": "Default value for the flag"
+        },
+        "global": {
+          "type": "boolean",
+          "description": "Whether flag is available to all subcommands",
+          "default": false
+        },
+        "count": {
+          "type": "boolean",
+          "description": "Whether flag can be repeated for counting",
+          "default": false
+        },
+        "hide": {
+          "type": "boolean",
+          "description": "Hide flag from help and completions",
+          "default": false
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether flag is required",
+          "default": false
+        },
+        "multiple": {
+          "type": "boolean",
+          "description": "Whether flag can accept multiple values",
+          "default": false
+        },
+        "possible_values": {
+          "type": "array",
+          "description": "Allowed values for the flag",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "anyOf": [
+        { "required": ["short"] },
+        { "required": ["long"] }
+      ]
+    },
+    "arg": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the argument"
+        },
+        "help": {
+          "type": "string",
+          "description": "Help text for the argument"
+        },
+        "long_help": {
+          "type": "string",
+          "description": "Detailed help text for the argument"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether argument is required",
+          "default": true
+        },
+        "multiple": {
+          "type": "boolean",
+          "description": "Whether argument can accept multiple values",
+          "default": false
+        },
+        "default": {
+          "type": "string",
+          "description": "Default value for optional arguments"
+        },
+        "possible_values": {
+          "type": "array",
+          "description": "Allowed values for the argument",
+          "items": {
+            "type": "string"
+          }
+        },
+        "complete": {
+          "type": "string",
+          "description": "Completion type",
+          "enum": ["file", "dir", "command", "username", "hostname"]
+        },
+        "hide": {
+          "type": "boolean",
+          "description": "Hide argument from help",
+          "default": false
+        }
+      },
+      "required": ["name"]
+    },
+    "command": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the command"
+        },
+        "help": {
+          "type": "string",
+          "description": "Short description of the command"
+        },
+        "long_help": {
+          "type": "string",
+          "description": "Detailed description of the command"
+        },
+        "before_help": {
+          "type": "string",
+          "description": "Text shown before command help"
+        },
+        "after_help": {
+          "type": "string",
+          "description": "Text shown after command help"
+        },
+        "before_long_help": {
+          "type": "string",
+          "description": "Text shown before detailed help"
+        },
+        "after_long_help": {
+          "type": "string",
+          "description": "Text shown after detailed help"
+        },
+        "aliases": {
+          "type": "array",
+          "description": "Alternative names for the command",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "hide": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "required": ["name"]
+              }
+            ]
+          }
+        },
+        "hide": {
+          "type": "boolean",
+          "description": "Hide command from help and completions",
+          "default": false
+        },
+        "subcommand_required": {
+          "type": "boolean",
+          "description": "Whether a subcommand is required",
+          "default": false
+        },
+        "flags": {
+          "type": "array",
+          "description": "Command-specific flags",
+          "items": {
+            "$ref": "#/definitions/flag"
+          }
+        },
+        "args": {
+          "type": "array",
+          "description": "Command arguments",
+          "items": {
+            "$ref": "#/definitions/arg"
+          }
+        },
+        "subcommands": {
+          "type": "array",
+          "description": "Nested subcommands",
+          "items": {
+            "$ref": "#/definitions/command"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "description": "Command usage examples",
+          "items": {
+            "$ref": "#/definitions/example"
+          }
+        },
+        "mount": {
+          "type": "object",
+          "description": "Dynamic command mounting",
+          "properties": {
+            "run": {
+              "type": "string",
+              "description": "Command to run for dynamic mounting"
+            }
+          },
+          "required": ["run"]
+        }
+      },
+      "required": ["name"]
+    },
+    "example": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name or title of the example"
+        },
+        "command": {
+          "type": "string",
+          "description": "Example command"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of what the example does"
+        },
+        "output": {
+          "type": "string",
+          "description": "Expected output of the command"
+        }
+      },
+      "required": ["command"]
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,48 @@
+{
+  "recommendations": [
+    // Linting and formatting
+    "biomejs.biome",
+    "oxc.oxc-vscode",
+    "EditorConfig.EditorConfig",
+
+    // Runtime and language support
+    "oven.bun-vscode",
+    "rust-lang.rust-analyzer",
+
+    // TOML, YAML, JSON
+    "tamasfe.even-better-toml",
+    "redhat.vscode-yaml",
+
+    // Git
+    "eamodio.gitlens",
+    "GitHub.copilot",
+    "GitHub.copilot-chat",
+
+    // Theme and UI
+    "Catppuccin.catppuccin-vsc",
+    "Catppuccin.catppuccin-vsc-icons",
+
+    // Tool management
+    "jdx.mise-vscode",
+
+    // Containers
+    "ms-azuretools.vscode-containers",
+
+    // Testing
+    "ms-playwright.playwright",
+
+    // Nushell
+    "thenuprojectcontributors.vscode-nushell-lang",
+
+    // Markdown
+    "yzhang.markdown-all-in-one",
+
+    // CSS
+    "bradlc.vscode-tailwindcss"
+  ],
+  "unwantedRecommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-tslint-plugin"
+  ]
+}

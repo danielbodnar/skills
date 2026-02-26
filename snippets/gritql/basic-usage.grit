@@ -1,0 +1,49 @@
+# Basic GritQL Usage Examples
+
+# Simple pattern matching and replacement
+engine marzano(0.1)
+language js
+
+# Example 1: Remove console.log statements
+`console.log($_)` => .
+
+# Example 2: Convert var to const (basic)
+`var $name = $value` => `const $name = $value`
+
+# Example 3: Update function calls
+`jQuery($selector)` => `document.querySelector($selector)`
+
+# Example 4: Add semicolons
+`$statement` => `$statement;` where {
+  $statement <: or {
+    expression_statement(),
+    return_statement(),
+    break_statement(),
+    continue_statement()
+  },
+  $statement <: not contains `;`
+}
+
+# Example 5: Convert arrow functions
+`function $name($params) { return $expr }` => `const $name = ($params) => $expr`
+
+# Example 6: Remove unused imports
+`import $name from $source` => . where {
+  $name <: not within any {
+    call_expression(function=$name),
+    member_expression(object=$name),
+    jsx_element(name=$name)
+  }
+}
+
+# Example 7: Add missing await
+`$promise.$method()` => `await $promise.$method()` where {
+  $method <: or { `then`, `catch`, `finally` },
+  $promise <: within async_function()
+}
+
+# Example 8: Convert string concatenation to template literals
+`$a + $b` => `\`${$a}${$b}\`` where {
+  $a <: string(),
+  $b <: string()
+}

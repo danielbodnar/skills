@@ -1,0 +1,62 @@
+# VyOS Basic Initial Setup Configuration
+
+# Enter configuration mode
+configure
+
+# System hostname and domain
+set system host-name 'vyos-router'
+set system domain-name 'local.domain'
+
+# System user configuration
+set system login user admin authentication plaintext-password 'vyos123'
+set system login user admin level 'admin'
+
+# Interface configuration
+set interfaces ethernet eth0 address '192.168.1.1/24'
+set interfaces ethernet eth0 description 'LAN Interface'
+set interfaces ethernet eth1 address 'dhcp'
+set interfaces ethernet eth1 description 'WAN Interface'
+
+# DNS configuration
+set system name-server '8.8.8.8'
+set system name-server '8.8.4.4'
+
+# NTP configuration
+set system ntp server '0.pool.ntp.org'
+set system ntp server '1.pool.ntp.org'
+
+# SSH service
+set service ssh port '22'
+set service ssh listen-address '192.168.1.1'
+
+# Basic firewall
+set firewall name OUTSIDE-IN default-action 'drop'
+set firewall name OUTSIDE-IN rule 10 action 'accept'
+set firewall name OUTSIDE-IN rule 10 state established 'enable'
+set firewall name OUTSIDE-IN rule 10 state related 'enable'
+
+# Apply firewall to WAN interface
+set interfaces ethernet eth1 firewall in name 'OUTSIDE-IN'
+
+# NAT configuration for internet access
+set nat source rule 100 outbound-interface 'eth1'
+set nat source rule 100 source address '192.168.1.0/24'
+set nat source rule 100 translation address 'masquerade'
+
+# DHCP server for LAN
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 default-router '192.168.1.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 dns-server '192.168.1.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 domain-name 'local.domain'
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 range 0 start '192.168.1.100'
+set service dhcp-server shared-network-name LAN subnet 192.168.1.0/24 range 0 stop '192.168.1.200'
+
+# DNS forwarding
+set service dns forwarding listen-address '192.168.1.1'
+set service dns forwarding allow-from '192.168.1.0/24'
+set service dns forwarding name-server '8.8.8.8'
+set service dns forwarding name-server '8.8.4.4'
+
+# Commit and save configuration
+commit
+save
+exit

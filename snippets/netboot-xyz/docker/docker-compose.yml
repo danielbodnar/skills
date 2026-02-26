@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  netbootxyz:
+    image: ghcr.io/netbootxyz/netbootxyz:latest
+    container_name: netbootxyz
+    restart: unless-stopped
+    ports:
+      - "3000:3000"      # Web configuration interface
+      - "69:69/udp"      # TFTP port
+      - "8080:80"        # NGINX asset server
+    volumes:
+      - ./config:/config           # Configuration storage
+      - ./assets:/assets           # Asset storage (ISOs, etc.)
+    environment:
+      - MENU_VERSION=2.0.84        # Optional: specific version
+      - NGINX_PORT=80              # Optional: nginx port
+      - WEB_APP_PORT=3000          # Optional: web interface port
+      - TFTPD_OPTS=--tftp-single-port  # Optional: TFTP configuration
+    networks:
+      - netboot
+
+networks:
+  netboot:
+    driver: bridge

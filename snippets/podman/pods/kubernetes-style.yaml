@@ -1,0 +1,55 @@
+# Kubernetes-style Pod Definition
+# Use with: podman play kube pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-pod
+  labels:
+    app: webapp
+spec:
+  restartPolicy: Always
+  containers:
+  - name: frontend
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+      protocol: TCP
+    volumeMounts:
+    - name: shared-data
+      mountPath: /usr/share/nginx/html
+    env:
+    - name: BACKEND_URL
+      value: "http://localhost:3000"
+    
+  - name: backend
+    image: node:alpine
+    ports:
+    - containerPort: 3000
+      protocol: TCP
+    volumeMounts:
+    - name: shared-data
+      mountPath: /app/public
+    env:
+    - name: NODE_ENV
+      value: "production"
+    command: ["node", "server.js"]
+    
+  volumes:
+  - name: shared-data
+    emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080
+    protocol: TCP
+  selector:
+    app: webapp

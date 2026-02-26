@@ -1,0 +1,222 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "error",
+        "noAsyncPromiseExecutor": "error",
+        "noCatchAssign": "error",
+        "noClassAssign": "error",
+        "noCompareNegZero": "error",
+        "noControlCharactersInRegex": "error",
+        "noDebugger": "error",
+        "noDuplicateCase": "error",
+        "noDuplicateClassMembers": "error",
+        "noDuplicateObjectKeys": "error",
+        "noDuplicateParameters": "error",
+        "noEmptyBlockStatements": "error",
+        "noEmptyInterface": "error",
+        "noFallthroughSwitchClause": "error",
+        "noFunctionAssign": "error",
+        "noGlobalObjectCalls": "error",
+        "noImportAssign": "error",
+        "noLabelVar": "error",
+        "noMisleadingCharacterClass": "error",
+        "noPrototypeBuiltins": "error",
+        "noRedeclare": "error",
+        "noShadowRestrictedNames": "error",
+        "noUnsafeNegation": "error"
+      },
+      "style": {
+        "noUselessElse": "warn",
+        "useImportType": "error",
+        "useConst": "error",
+        "useTemplate": "error",
+        "useBlockStatements": "error",
+        "useCollapsedElseIf": "error",
+        "useConsistentArrayType": "error",
+        "useExponentiationOperator": "error",
+        "useFragmentSyntax": "error",
+        "useNumberNamespace": "error",
+        "useNumericLiterals": "error",
+        "useOptionalChain": "error",
+        "useSelfClosingElements": "error",
+        "useShorthandArrayType": "error",
+        "useShorthandAssign": "error",
+        "useSingleCaseStatement": "error",
+        "useSingleVarDeclarator": "error"
+      },
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "useExhaustiveDependencies": "warn",
+        "useHookAtTopLevel": "error",
+        "noChildrenProp": "error",
+        "noDanglingReactHooks": "error",
+        "noInvalidConstructorSuper": "error",
+        "noInvalidNewBuiltin": "error",
+        "noNewSymbol": "error",
+        "noSetterReturn": "error",
+        "noSwitchDeclarations": "error",
+        "noUndeclaredVariables": "error",
+        "noUnreachable": "error",
+        "noUnusedLabels": "error",
+        "useIsNan": "error",
+        "useValidForDirection": "error"
+      },
+      "complexity": {
+        "noBannedTypes": "error",
+        "noForEach": "off",
+        "noStaticOnlyClass": "error",
+        "noUselessConstructor": "error",
+        "noUselessFragments": "error",
+        "noUselessLabel": "error",
+        "noUselessRename": "error",
+        "noUselessSwitchCase": "error",
+        "noUselessTernary": "error",
+        "noVoid": "error",
+        "noWith": "error",
+        "useLiteralKeys": "error",
+        "useRegexLiterals": "error"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "error",
+        "noDangerouslySetInnerHtmlWithChildren": "error"
+      },
+      "nursery": {
+        "noEvolvingTypes": "warn",
+        "noMisplacedAssertion": "error",
+        "noReactSpecificProps": "error",
+        "noRestrictedImports": "off",
+        "noUndeclaredDependencies": "error",
+        "noUnusedFunctionParameters": "warn",
+        "useAwait": "error"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "trailingComma": "es5",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSpacing": true,
+      "bracketSameLine": false,
+      "quoteProperties": "asNeeded",
+      "attributePosition": "auto"
+    },
+    "globals": [
+      "d3",
+      "Plot",
+      "html",
+      "md",
+      "svg",
+      "tex",
+      "width",
+      "invalidation",
+      "now",
+      "FileAttachment",
+      "Inputs",
+      "Generators",
+      "Mutable",
+      "display",
+      "view",
+      "resize"
+    ]
+  },
+  "json": {
+    "formatter": {
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineWidth": 80
+    }
+  },
+  "css": {
+    "formatter": {
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineWidth": 80
+    }
+  },
+  "files": {
+    "include": [
+      "src/**/*",
+      "docs/**/*",
+      "components/**/*",
+      "*.js",
+      "*.ts",
+      "*.jsx",
+      "*.tsx",
+      "*.json",
+      "*.md"
+    ],
+    "ignore": [
+      "node_modules/**/*",
+      "dist/**/*",
+      ".observablehq/**/*",
+      "*.min.js",
+      "*.bundle.js",
+      "coverage/**/*"
+    ]
+  },
+  "overrides": [
+    {
+      "include": ["*.md"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useTemplate": "off"
+          },
+          "correctness": {
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["src/data/**/*.js", "src/data/**/*.ts"],
+      "javascript": {
+        "globals": [
+          "process",
+          "console",
+          "Buffer",
+          "__dirname",
+          "__filename",
+          "require",
+          "module",
+          "exports"
+        ]
+      },
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUndeclaredVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["observablehq.config.js", "observablehq.config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useImportType": "off"
+          }
+        }
+      }
+    }
+  ]
+}

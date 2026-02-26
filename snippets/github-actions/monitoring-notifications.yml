@@ -1,0 +1,343 @@
+# Monitoring and Notifications
+# Comprehensive monitoring, alerting, and notification patterns
+
+name: Monitoring and Notifications
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours for health checks
+  workflow_run:
+    workflows: ["Deploy"]
+    types: [completed]
+
+jobs:
+  # Health monitoring and uptime checks
+  health-monitoring:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+    - name: Check production health
+      id: health-check
+      run: |
+        echo "Checking production health endpoints"
+
+        # API health check
+        if curl -f --max-time 30 https://api.example.com/health; then
+          echo "api_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "api_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+
+        # Web app health check
+        if curl -f --max-time 30 https://example.com; then
+          echo "web_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "web_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+
+        # Database connectivity (example)
+        if timeout 10 nc -z db.example.com 5432; then
+          echo "db_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "db_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Send health status to monitoring
+      env:
+        DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+      run: |
+        # Send metrics to Datadog
+        curl -X POST "https://api.datadoghq.com/api/v1/series" \
+          -H "Content-Type: application/json" \
+          -H "DD-API-KEY: $DATADOG_API_KEY" \
+          -d '{
+            "series": [
+              {
+                "metric": "app.health.api",
+                "points": [['$(date +%s)', $([ "${{ steps.health-check.outputs.api_status }}" = "healthy" ] && echo 1 || echo 0)]],
+                "tags": ["env:production"]
+              }
+            ]
+          }'
+
+    - name: Alert on health issues
+      if: |
+        steps.health-check.outputs.api_status == 'unhealthy' ||
+        steps.health-check.outputs.web_status == 'unhealthy' ||
+        steps.health-check.outputs.db_status == 'unhealthy'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+
+          await github.rest.issues.create({
+            owner,
+            repo,
+            title: '🚨 Production Health Check Failed',
+            body: `
+              # Production Health Check Alert
+
+              **Time:** ${new Date().toISOString()}
+              **API Status:** ${{ steps.health-check.outputs.api_status }}
+              **Web Status:** ${{ steps.health-check.outputs.web_status }}
+              **DB Status:** ${{ steps.health-check.outputs.db_status }}
+
+              Please investigate immediately.
+            `,
+            labels: ['urgent', 'production', 'health-check']
+          });
+
+  # Deployment success/failure notifications
+  deployment-notifications:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run'
+
+    steps:
+    - name: Get deployment info
+      id: deployment-info
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const run = context.payload.workflow_run;
+          const conclusion = run.conclusion;
+          const environment = run.head_branch === 'main' ? 'production' : 'staging';
+
+          core.setOutput('conclusion', conclusion);
+          core.setOutput('environment', environment);
+          core.setOutput('run_url', run.html_url);
+          core.setOutput('commit_sha', run.head_sha);
+
+    - name: Notify Slack on deployment success
+      if: steps.deployment-info.outputs.conclusion == 'success'
+      uses: slackapi/slack-github-action@v1.26.0
+      with:
+        channel-id: 'deployments'
+        slack-message: |
+          ✅ Deployment to ${{ steps.deployment-info.outputs.environment }} successful!
+
+          **Commit:** ${{ steps.deployment-info.outputs.commit_sha }}
+          **Environment:** ${{ steps.deployment-info.outputs.environment }}
+          **Workflow:** ${{ steps.deployment-info.outputs.run_url }}
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+    - name: Notify Slack on deployment failure
+      if: steps.deployment-info.outputs.conclusion == 'failure'
+      uses: slackapi/slack-github-action@v1.26.0
+      with:
+        channel-id: 'alerts'
+        slack-message: |
+          🚨 Deployment to ${{ steps.deployment-info.outputs.environment }} FAILED!
+
+          **Commit:** ${{ steps.deployment-info.outputs.commit_sha }}
+          **Environment:** ${{ steps.deployment-info.outputs.environment }}
+          **Workflow:** ${{ steps.deployment-info.outputs.run_url }}
+
+          @channel Please investigate immediately!
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+    - name: Send email notification on production failure
+      if: |
+        steps.deployment-info.outputs.conclusion == 'failure' &&
+        steps.deployment-info.outputs.environment == 'production'
+      uses: dawidd6/action-send-mail@v4
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: 'URGENT: Production Deployment Failed'
+        to: devops@example.com,team-lead@example.com
+        from: github-actions@example.com
+        body: |
+          Production deployment has failed!
+
+          Commit: ${{ steps.deployment-info.outputs.commit_sha }}
+          Workflow: ${{ steps.deployment-info.outputs.run_url }}
+
+          Please investigate and fix immediately.
+
+  # Performance monitoring
+  performance-monitoring:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+
+    - name: Analyze bundle size
+      id: bundle-analysis
+      run: |
+        # Get bundle sizes
+        TOTAL_SIZE=$(du -sk dist/ | cut -f1)
+        JS_SIZE=$(find dist -name "*.js" -exec du -sk {} + | awk '{sum+=$1} END {print sum}')
+        CSS_SIZE=$(find dist -name "*.css" -exec du -sk {} + | awk '{sum+=$1} END {print sum}')
+
+        echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
+        echo "js_size=$JS_SIZE" >> $GITHUB_OUTPUT
+        echo "css_size=$CSS_SIZE" >> $GITHUB_OUTPUT
+
+        # Set thresholds (in KB)
+        TOTAL_THRESHOLD=5000
+        JS_THRESHOLD=3000
+
+        if [ $TOTAL_SIZE -gt $TOTAL_THRESHOLD ]; then
+          echo "size_warning=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run Lighthouse audit
+      run: |
+        npm install -g @lhci/cli
+
+        # Start local server
+        npm start &
+        SERVER_PID=$!
+        sleep 10
+
+        # Run Lighthouse
+        lhci autorun || true
+
+        # Stop server
+        kill $SERVER_PID
+
+    - name: Comment on PR with performance metrics
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const totalSize = ${{ steps.bundle-analysis.outputs.total_size }};
+          const jsSize = ${{ steps.bundle-analysis.outputs.js_size }};
+          const cssSize = ${{ steps.bundle-analysis.outputs.css_size }};
+
+          const comment = `
+          ## 📊 Performance Report
+
+          **Bundle Sizes:**
+          - Total: ${totalSize}KB
+          - JavaScript: ${jsSize}KB
+          - CSS: ${cssSize}KB
+
+          ${totalSize > 5000 ? '⚠️ Bundle size exceeds 5MB threshold!' : '✅ Bundle size within limits'}
+          `;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+    - name: Send performance metrics to monitoring
+      env:
+        NEW_RELIC_API_KEY: ${{ secrets.NEW_RELIC_API_KEY }}
+      run: |
+        # Send custom metrics to New Relic
+        curl -X POST 'https://metric-api.newrelic.com/metric/v1' \
+          -H 'Content-Type: application/json' \
+          -H 'Api-Key: $NEW_RELIC_API_KEY' \
+          -d '{
+            "metrics": [
+              {
+                "name": "bundle.size.total",
+                "type": "gauge",
+                "value": ${{ steps.bundle-analysis.outputs.total_size }},
+                "timestamp": '$(date +%s)',
+                "attributes": {
+                  "service": "web-app",
+                  "environment": "production"
+                }
+              }
+            ]
+          }'
+
+  # Security monitoring
+  security-monitoring:
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Run security scan
+      id: security-scan
+      run: |
+        # Run Trivy security scan
+        docker run --rm -v "$(pwd):/workspace" \
+          aquasec/trivy fs --format json --output results.json /workspace
+
+        # Check for critical vulnerabilities
+        CRITICAL_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' results.json)
+        HIGH_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' results.json)
+
+        echo "critical_vulns=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
+        echo "high_vulns=$HIGH_COUNT" >> $GITHUB_OUTPUT
+
+    - name: Alert on critical vulnerabilities
+      if: steps.security-scan.outputs.critical_vulns > 0
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const criticalCount = ${{ steps.security-scan.outputs.critical_vulns }};
+          const highCount = ${{ steps.security-scan.outputs.high_vulns }};
+
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '🔒 Critical Security Vulnerabilities Detected',
+            body: `
+              # Security Alert
+
+              **Critical Vulnerabilities:** ${criticalCount}
+              **High Vulnerabilities:** ${highCount}
+              **Commit:** ${context.sha}
+
+              Please review and fix immediately!
+            `,
+            labels: ['security', 'urgent']
+          });
+
+  # Custom webhook notifications
+  webhook-notifications:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [health-monitoring, performance-monitoring]
+
+    steps:
+    - name: Send webhook notification
+      env:
+        WEBHOOK_URL: ${{ secrets.CUSTOM_WEBHOOK_URL }}
+      run: |
+        curl -X POST "$WEBHOOK_URL" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "event": "workflow_completed",
+            "repository": "${{ github.repository }}",
+            "workflow": "${{ github.workflow }}",
+            "status": "${{ job.status }}",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "actor": "${{ github.actor }}",
+            "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+          }'

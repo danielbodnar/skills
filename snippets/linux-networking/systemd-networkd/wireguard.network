@@ -1,0 +1,78 @@
+# systemd-networkd WireGuard Configuration
+# File: /etc/systemd/network/25-wg0.netdev
+[NetDev]
+Name=wg0
+Kind=wireguard
+
+[WireGuard]
+PrivateKeyFile=/etc/systemd/network/wg0.key
+ListenPort=51820
+
+[WireGuardPeer]
+PublicKey=<PEER_PUBLIC_KEY>
+AllowedIPs=10.0.0.2/32
+Endpoint=<PEER_IP>:51820
+PersistentKeepalive=25
+
+# File: /etc/systemd/network/25-wg0.network
+[Match]
+Name=wg0
+
+[Network]
+Address=10.0.0.1/24
+DNS=8.8.8.8
+
+# Site-to-Site WireGuard
+# File: /etc/systemd/network/25-wg-site.netdev
+[NetDev]
+Name=wg-site
+Kind=wireguard
+
+[WireGuard]
+PrivateKeyFile=/etc/systemd/network/wg-site.key
+ListenPort=51821
+
+[WireGuardPeer]
+PublicKey=<SITE_B_PUBLIC_KEY>
+AllowedIPs=10.10.0.2/32,192.168.2.0/24
+Endpoint=<SITE_B_IP>:51821
+PersistentKeepalive=25
+
+# File: /etc/systemd/network/25-wg-site.network
+[Match]
+Name=wg-site
+
+[Network]
+Address=10.10.0.1/30
+
+[Route]
+Destination=192.168.2.0/24
+Gateway=10.10.0.2
+
+# Road Warrior WireGuard Server
+# File: /etc/systemd/network/25-wg-server.netdev
+[NetDev]
+Name=wg-server
+Kind=wireguard
+
+[WireGuard]
+PrivateKeyFile=/etc/systemd/network/wg-server.key
+ListenPort=51820
+
+# Client 1
+[WireGuardPeer]
+PublicKey=<CLIENT1_PUBLIC_KEY>
+AllowedIPs=10.0.0.10/32
+
+# Client 2
+[WireGuardPeer]
+PublicKey=<CLIENT2_PUBLIC_KEY>
+AllowedIPs=10.0.0.11/32
+
+# File: /etc/systemd/network/25-wg-server.network
+[Match]
+Name=wg-server
+
+[Network]
+Address=10.0.0.1/24
+IPForward=yes
