@@ -3,7 +3,7 @@
   "name": "skills",
   "metadata": {
     "description": "Curated collection of Claude Code plugins, skills, references, and configurations for modern TypeScript/Bun development, SRE operations, and infrastructure management.",
-    "version": "1.0.0"
+    "version": "2.0.0"
   },
   "owner": {
     "name": "Daniel Bodnar",
@@ -31,21 +31,33 @@
     },
     {
       "name": "superpowers",
-      "description": "Advanced development workflows including TDD, debugging, code review, and parallel agent orchestration.",
-      "source": "./external_plugins/superpowers",
-      "category": "workflow"
+      "description": "Superpowers teaches Claude brainstorming, subagent driven development with built in code review, systematic debugging, and red/green TDD. Additionally, it teaches Claude how to author and test new skills.",
+      "category": "development",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/obra/superpowers.git"
+      },
+      "homepage": "https://github.com/obra/superpowers.git"
     },
     {
       "name": "huggingface-skills",
-      "description": "Hugging Face integration skills for ML model management and inference.",
-      "source": "./external_plugins/huggingface-skills",
-      "category": "ai-ml"
+      "description": "Build, train, evaluate, and use open source AI models, datasets, and spaces.",
+      "category": "development",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/huggingface/skills.git"
+      },
+      "homepage": "https://github.com/huggingface/skills.git"
     },
     {
-      "name": "sentry-skills",
-      "description": "Sentry integration for error tracking, performance monitoring, and issue management.",
-      "source": "./external_plugins/sentry-skills",
-      "category": "monitoring"
+      "name": "sentry",
+      "description": "Sentry error monitoring integration. Access error reports, analyze stack traces, search issues by fingerprint, and debug production errors directly from your development environment.",
+      "category": "monitoring",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/getsentry/sentry-for-claude.git"
+      },
+      "homepage": "https://github.com/getsentry/sentry-for-claude/tree/main"
     }
   ]
 }
