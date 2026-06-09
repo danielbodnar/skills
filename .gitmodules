@@ -1,27 +1,12 @@
 [submodule "external_plugins/superpowers"]
 	path = external_plugins/superpowers
 	url = https://github.com/obra/superpowers.git
-[submodule "external_plugins/qodo-skills"]
-	path = external_plugins/qodo-skills
-	url = https://github.com/qodo-ai/qodo-skills.git
 [submodule "external_plugins/huggingface-skills"]
 	path = external_plugins/huggingface-skills
 	url = https://github.com/huggingface/skills.git
 [submodule "external_plugins/sentry-skills"]
 	path = external_plugins/sentry-skills
 	url = https://github.com/getsentry/sentry-for-claude.git
-[submodule "external_plugins/posthog"]
-	path = external_plugins/posthog
-	url = https://github.com/PostHog/posthog-for-claude.git
-[submodule "external_plugins/coderabbit"]
-	path = external_plugins/coderabbit
-	url = https://github.com/coderabbitai/claude-plugin.git
-[submodule "external_plugins/firecrawl"]
-	path = external_plugins/firecrawl
-	url = https://github.com/firecrawl/firecrawl-claude-plugin.git
-[submodule "external_plugins/sonatype-guide"]
-	path = external_plugins/sonatype-guide
-	url = https://github.com/sonatype/sonatype-guide-claude-plugin.git
 [submodule "vendors/mcp-servers/awesome-mcp-servers"]
 	path = vendors/mcp-servers/awesome-mcp-servers
 	url = https://github.com/punkpeye/awesome-mcp-servers.git
@@ -73,4 +58,8 @@
 [submodule "vendors/claude-ecosystem/claude-plugins-official"]
 	path = vendors/claude-ecosystem/claude-plugins-official
 	url = https://github.com/anthropics/claude-plugins-official.git
+	shallow = true
+[submodule "vendors/linters-formatters/bodnar-sh-configs"]
+	path = vendors/linters-formatters/bodnar-sh-configs
+	url = https://github.com/bodnar-sh/configs.git
 	shallow = true

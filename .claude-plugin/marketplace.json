@@ -36,12 +36,6 @@
       "category": "workflow"
     },
     {
-      "name": "qodo-skills",
-      "description": "AI-powered code quality skills from Qodo for testing, review, and analysis.",
-      "source": "./external_plugins/qodo-skills",
-      "category": "code-quality"
-    },
-    {
       "name": "huggingface-skills",
       "description": "Hugging Face integration skills for ML model management and inference.",
       "source": "./external_plugins/huggingface-skills",
@@ -52,30 +46,6 @@
       "description": "Sentry integration for error tracking, performance monitoring, and issue management.",
       "source": "./external_plugins/sentry-skills",
       "category": "monitoring"
-    },
-    {
-      "name": "posthog",
-      "description": "PostHog integration for product analytics, feature flags, and session replay.",
-      "source": "./external_plugins/posthog",
-      "category": "analytics"
-    },
-    {
-      "name": "coderabbit",
-      "description": "CodeRabbit AI-powered code review and analysis plugin.",
-      "source": "./external_plugins/coderabbit",
-      "category": "code-quality"
-    },
-    {
-      "name": "firecrawl",
-      "description": "Firecrawl web scraping and crawling integration for data extraction.",
-      "source": "./external_plugins/firecrawl",
-      "category": "data"
-    },
-    {
-      "name": "sonatype-guide",
-      "description": "Sonatype dependency security scanning and vulnerability management.",
-      "source": "./external_plugins/sonatype-guide",
-      "category": "security"
     }
   ]
 }
