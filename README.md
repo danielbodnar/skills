@@ -13,6 +13,10 @@ bunx skills@latest list
 bunx skills@latest add obra/superpowers
 ```
 
+## Documentation
+
+Full developer docs live in [`docs/`](./docs/README.md): [getting started](./docs/getting-started.md), [CLI reference](./docs/cli-reference.md), [plugin authoring](./docs/plugin-authoring.md), [troubleshooting](./docs/troubleshooting.md), and [architecture decisions](./docs/architecture/adr-001-devendor-to-marketplace.md).
+
 ## What's Inside
 
 ### Plugins
