@@ -1,6 +1,6 @@
 # Skills Marketplace
 
-A centralized collection of Claude Code plugins, skills, references, configs, and vendor integrations.
+A centralized collection of Claude Code plugins, skills, references, and configs. No git submodules — external plugins are catalog entries with remote git sources, fetched by Claude Code at install time.
 
 ## Quick Start
 
@@ -10,14 +10,18 @@ claude plugin marketplace add github:danielbodnar/skills
 
 # Or use the CLI tool
 bunx skills@latest list
-bunx skills@latest add cloudflare/skills@agents-sdk
+bunx skills@latest add obra/superpowers
 ```
+
+## Documentation
+
+Full developer docs live in [`docs/`](./docs/README.md): [getting started](./docs/getting-started.md), [CLI reference](./docs/cli-reference.md), [plugin authoring](./docs/plugin-authoring.md), [troubleshooting](./docs/troubleshooting.md), and [architecture decisions](./docs/architecture/adr-001-devendor-to-marketplace.md).
 
 ## What's Inside
 
 ### Plugins
 
-**First-party** (`plugins/`):
+**First-party** (`plugins/`, versioned with this repo):
 
 | Plugin | Description |
 |--------|-------------|
@@ -25,54 +29,49 @@ bunx skills@latest add cloudflare/skills@agents-sdk
 | `project-scaffold` | Mise, justfile, devcontainer, and project template skills |
 | `infra-ops` | SRE commands for incident response, capacity planning, and system analysis |
 
-**External** (`external_plugins/` — git submodules):
+**External** (remote git sources — nothing vendored, installs track upstream):
 
 | Plugin | Source |
 |--------|--------|
 | `superpowers` | [obra/superpowers](https://github.com/obra/superpowers) |
-| `qodo-skills` | [qodo-ai/qodo-skills](https://github.com/qodo-ai/qodo-skills) |
 | `huggingface-skills` | [huggingface/skills](https://github.com/huggingface/skills) |
-| `sentry-skills` | [getsentry/sentry-for-claude](https://github.com/getsentry/sentry-for-claude) |
-| `posthog` | [PostHog/posthog-for-claude](https://github.com/PostHog/posthog-for-claude) |
-| `coderabbit` | [coderabbitai/claude-plugin](https://github.com/coderabbitai/claude-plugin) |
-| `firecrawl` | [firecrawl/firecrawl-claude-plugin](https://github.com/firecrawl/firecrawl-claude-plugin) |
-| `sonatype-guide` | [sonatype/sonatype-guide-claude-plugin](https://github.com/sonatype/sonatype-guide-claude-plugin) |
+| `sentry` | [getsentry/sentry-for-claude](https://github.com/getsentry/sentry-for-claude) |
+
+**Cherry-picked from [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official)** (`git-subdir` sources):
+
+| Plugin | Category |
+|--------|----------|
+| `hookify` | productivity |
+| `security-guidance` | security |
+| `plugin-dev` | development |
+| `skill-creator` | development |
+| `typescript-lsp`, `rust-analyzer-lsp`, `gopls-lsp` | language servers |
+
+See `references/related-marketplaces.md` for the official and community marketplaces themselves.
 
 ### References & Snippets
 
-Canonical source for `~/.claude/references/` and `~/.claude/snippets/`. Covers 65+ tools including Effect-TS, Bun, Astro, Vue, Cloudflare Workers, Rust, and more.
+Canonical source for `~/.claude/references/` and `~/.claude/snippets/`. Covers 65+ tools including Effect-TS, Bun, Astro, Vue, Cloudflare Workers, Rust, and more. Dev tools formerly vendored as submodules are documented in `references/dev-tools.md` and version-managed via `.mise.toml`.
 
 ### Configs
 
 Shareable configuration templates in `configs/`:
 
 - **Mise** — tool version management configs
-- **Linters** — OxLint, Biome, Prettier presets
+- **Linters** — OxLint, Biome, Prettier presets (incl. `bodnar-sh` oxlint/oxfmt bases)
+- **Git hooks** — pre-commit / pre-push hooks with installer
 - **Justfiles** — task runner recipes for Bun, Rust, Cloudflare
 - **Devcontainers** — Bun and Rust container configurations
 - **GitHub** — Copilot agents, CI/CD workflows
 - **Editors** — Neovim, Zed, VS Code settings
 
-### Vendor References
-
-Shallow submodules in `vendors/` for reference:
-
-- MCP servers (awesome-mcp-servers, official servers, Cloudflare)
-- Editor configs (kickstart.nvim, LazyVim, Zed extensions)
-- Devcontainer features and templates
-- Linter/formatter source (oxc, biome)
-- Tool source (mise, just)
-- Claude ecosystem (claude-plugins-official)
-
 ## Directory Structure
 
 ```
 skills/
-├── .claude-plugin/          # Marketplace manifest
+├── .claude-plugin/          # Marketplace manifest (local + remote plugin sources)
 ├── src/                     # CLI tool source
 ├── plugins/                 # First-party plugins
-├── external_plugins/        # 3rd-party plugins (submodules)
-├── vendors/                 # Reference repos (shallow submodules)
 ├── rules/                   # Global rules
 ├── styleguides/             # Code style guides
 ├── standards/               # Coding standards
@@ -85,16 +84,16 @@ skills/
 
 ## CLI Tool
 
-The `skills` CLI manages the collection:
+The `skills` CLI manages the catalog:
 
 ```bash
 skills <command> [options] [arguments]
 
 skills list [glob]            # List plugins, filter by glob
 skills search <query>         # Search by name/description/category
-skills add <org/repo[@path]>  # Add an external plugin
-skills update [target]        # Update submodules (vendors|plugins|all)
-skills validate               # Validate manifests and paths
+skills add <org/repo[@path]>  # Register a plugin with a remote git source
+skills update [plugin]        # Show upstream-tracking vs pinned plugins
+skills validate               # Validate manifest and plugin sources
 skills catalog                # Generate CATALOG.md
 skills sync                   # Sync references to ~/.claude/
 ```
@@ -115,61 +114,39 @@ skills sync                   # Sync references to ~/.claude/
 ```bash
 skills list "code-*"                  # Glob-filtered list
 skills search "linting"               # Full-text search
-skills add cloudflare/skills@agents   # Add with path
+skills add obra/superpowers           # Register remote plugin
+skills add anthropics/claude-plugins-official@plugins/hookify
 skills list --json | jq '.[] | .name' # Pipe to jq
 skills sync --dry-run                 # Preview sync
 ```
 
+## Versioning & Updates
+
+External entries are intentionally **unpinned**: Claude Code uses the source's
+commit SHA as the version key, so `/plugin update` pulls the latest upstream
+commit. To pin a plugin, add `ref` (branch/tag) or `sha` to its source object
+in `marketplace.json`.
+
 ## Development
 
 ```bash
-# Install dependencies
-bun install
-
-# Initialize submodules
-git submodule update --init --recursive
-
-# Or use just
-just init
-
-# Run tests
-just test
-
-# Build CLI
-just build
-```
-
-## Management
-
-```bash
-# Update all vendors to latest
-just update-vendors
-
-# Update all external plugins
-just update-plugins
-
-# Validate everything
-just validate
-
-# Generate catalog
-just catalog
-
-# Sync references to ~/.claude/
-just sync
+just init        # bun install
+just test        # Run tests
+just build       # Build CLI
+just validate    # Validate marketplace
+just catalog     # Generate catalog
+just sync        # Sync references to ~/.claude/
 ```
 
 ## Adding a New Plugin
 
 ```bash
-# Create plugin skeleton
+# First-party: create plugin skeleton
 just new-plugin my-plugin
+# then edit plugins/my-plugin/.claude-plugin/plugin.json, skills/, commands/
 
-# Edit plugin manifest
-# plugins/my-plugin/.claude-plugin/plugin.json
-
-# Add skills and commands
-# plugins/my-plugin/skills/
-# plugins/my-plugin/commands/
+# External: register a remote source
+just add org/repo
 ```
 
 ## License

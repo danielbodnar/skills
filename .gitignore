@@ -33,3 +33,7 @@ coverage/
 
 # Generated
 CATALOG.md
+
+# Plugin/session state
+.claude/memories/
+.remember/

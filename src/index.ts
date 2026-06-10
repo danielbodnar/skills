@@ -7,7 +7,7 @@ import { catalogCommand } from "#commands/catalog.ts"
 import { searchCommand } from "#commands/search.ts"
 import { syncCommand } from "#commands/sync.ts"
 
-const VERSION = "1.0.0"
+const VERSION = "2.0.0"
 
 const parseArgs = (argv: string[]): { command: string; args: string[]; flags: Record<string, string | boolean> } => {
   const flags: Record<string, string | boolean> = {}
@@ -53,9 +53,9 @@ Usage:
 Commands:
   list [glob]            List plugins, optionally filtered by glob pattern
   search <query>         Search plugins by name, description, or category
-  add <source>           Add a plugin (e.g., org/repo or org/repo@path)
-  update [target]        Update submodules (vendors, plugins, or all)
-  validate               Validate marketplace manifest and plugin paths
+  add <source>           Register a plugin with a remote git source (org/repo or org/repo@path)
+  update [plugin]        Show which plugins track upstream vs are pinned
+  validate               Validate marketplace manifest and plugin sources
   catalog                Generate CATALOG.md from all content
   sync                   Sync references and snippets to ~/.claude/
 
@@ -71,8 +71,9 @@ Examples:
   skills list                     List all plugins
   skills list "code-*"            List plugins matching glob
   skills search "linting"         Search for linting-related plugins
-  skills add obra/superpowers     Add an external plugin
-  skills update vendors           Update vendor submodules only
+  skills add obra/superpowers     Register an external plugin (remote git source)
+  skills add anthropics/claude-plugins-official@plugins/hookify
+  skills update                   Show upstream-tracking vs pinned plugins
   skills validate --verbose       Validate with detailed output
   skills sync --dry-run           Preview reference sync changes
 `
@@ -99,7 +100,14 @@ const program = (): Effect.Effect<void, Error> => {
     case "search":
       return searchCommand({ query: args[0], json })
     case "add":
-      return addCommand({ source: args[0], verbose, dryRun })
+      return addCommand({
+        source: args[0],
+        name: typeof flags.name === "string" ? flags.name : undefined,
+        description: typeof flags.description === "string" ? flags.description : undefined,
+        category: typeof flags.category === "string" ? flags.category : undefined,
+        verbose,
+        dryRun,
+      })
     case "update":
       return updateCommand({ target: args[0], verbose, quiet })
     case "validate":

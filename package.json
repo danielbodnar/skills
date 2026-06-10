@@ -1,6 +1,6 @@
 {
   "name": "skills",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "CLI tool for managing a Claude Code skills marketplace and plugin collection",
   "type": "module",
   "bin": {
