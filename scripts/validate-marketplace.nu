@@ -19,6 +19,16 @@ def main [] {
 
   print $"  [ok]   marketplace.json \(($plugin_count) plugins\)"
 
+  # Duplicate plugin names are errors (mirrors src/commands/validate.ts)
+  let dup_results = ($marketplace.plugins
+    | get name
+    | uniq --count
+    | where count > 1
+    | each { |dup|
+      print $"  [err]  ($dup.value): duplicate plugin name"
+      {name: $dup.value, status: "error"}
+    })
+
   let results = ($marketplace.plugins | each { |plugin|
     let source = $plugin.source
 
@@ -59,9 +69,10 @@ def main [] {
   })
 
   # marketplace.json itself counts as 1 ok
-  let ok_count = 1 + ($results | where status == "ok" | length)
-  let warn_count = ($results | where status == "warning" | length)
-  let err_count = ($results | where status == "error" | length)
+  let all_results = ($results | append $dup_results)
+  let ok_count = 1 + ($all_results | where status == "ok" | length)
+  let warn_count = ($all_results | where status == "warning" | length)
+  let err_count = ($all_results | where status == "error" | length)
 
   print ""
   print $"Results: ($ok_count) ok, ($warn_count) warning\(s\), ($err_count) error\(s\)"

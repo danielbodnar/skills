@@ -7,7 +7,7 @@ import { catalogCommand } from "#commands/catalog.ts"
 import { searchCommand } from "#commands/search.ts"
 import { syncCommand } from "#commands/sync.ts"
 
-const VERSION = "1.0.0"
+const VERSION = "2.0.0"
 
 const parseArgs = (argv: string[]): { command: string; args: string[]; flags: Record<string, string | boolean> } => {
   const flags: Record<string, string | boolean> = {}

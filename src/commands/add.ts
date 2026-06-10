@@ -20,9 +20,17 @@ Examples:
   skills add obra/superpowers
   skills add anthropics/claude-plugins-official@plugins/hookify`
 
-const parseSource = (source: string): { org: string; repo: string; path?: string } => {
-  const [orgRepo, path] = source.split("@")
-  const [org, repo] = orgRepo.split("/")
+const parseSource = (source: string): { org: string; repo: string; path?: string } | undefined => {
+  const parts = source.split("@")
+  if (parts.length > 2) {
+    return undefined
+  }
+  const [orgRepo, path] = parts
+  const segments = orgRepo.split("/")
+  if (segments.length !== 2 || segments.some((segment) => segment.length === 0)) {
+    return undefined
+  }
+  const [org, repo] = segments
   return { org, repo, path }
 }
 
@@ -32,12 +40,16 @@ export const addCommand = (options: AddOptions): Effect.Effect<void, Error> =>
       return yield* Effect.fail(new Error(USAGE))
     }
 
-    const { org, repo, path } = parseSource(options.source)
-    if (!org || !repo) {
+    const parsed = parseSource(options.source)
+    if (!parsed) {
       return yield* Effect.fail(new Error(`Invalid source format: "${options.source}"\nExpected: org/repo or org/repo@path`))
     }
 
-    const name = options.name ?? (path ? path.split("/").at(-1)! : repo)
+    const { org, repo, path } = parsed
+    const name = options.name ?? (path ? path.split("/").filter((segment) => segment.length > 0).at(-1) : repo)
+    if (!name) {
+      return yield* Effect.fail(new Error(`Cannot derive a plugin name from path "${path}" — pass one explicitly with --name`))
+    }
     const source: RemoteSource = path
       ? { source: "git-subdir", url: `https://github.com/${org}/${repo}.git`, path }
       : { source: "github", repo: `${org}/${repo}` }

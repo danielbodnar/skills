@@ -106,16 +106,24 @@ export const isPinned = (source: PluginSource): boolean => {
   return source.ref !== undefined || source.sha !== undefined
 }
 
+const pinSuffix = (source: { readonly ref?: string; readonly sha?: string }): string => {
+  if (source.sha !== undefined) return `@${source.sha}`
+  if (source.ref !== undefined) return `@${source.ref}`
+  return ""
+}
+
 export const formatSource = (source: PluginSource): string => {
   if (typeof source === "string") return source
   switch (source.source) {
     case "github":
-      return `github:${source.repo}`
+      return `github:${source.repo}${pinSuffix(source)}`
     case "url":
-      return `git:${source.url}`
+      return `git:${source.url}${pinSuffix(source)}`
     case "git-subdir":
-      return `git:${source.url}#${source.path}`
+      return `git:${source.url}#${source.path}${pinSuffix(source)}`
     case "npm":
-      return `npm:${source.package}`
+      return source.version === undefined
+        ? `npm:${source.package}`
+        : `npm:${source.package}@${source.version}`
   }
 }

@@ -108,6 +108,53 @@ describe("isPinned", () => {
   })
 })
 
+describe("formatSource", () => {
+  test("unpinned sources format without a pin suffix", () => {
+    expect(formatSource("./plugins/code-quality")).toBe("./plugins/code-quality")
+    expect(formatSource({ source: "github", repo: "obra/superpowers" })).toBe(
+      "github:obra/superpowers"
+    )
+    expect(formatSource({ source: "url", url: "https://x.git" })).toBe("git:https://x.git")
+    expect(
+      formatSource({ source: "git-subdir", url: "https://x.git", path: "plugins/hookify" })
+    ).toBe("git:https://x.git#plugins/hookify")
+    expect(formatSource({ source: "npm", package: "foo" })).toBe("npm:foo")
+  })
+
+  test("github source pinned to a ref includes the ref", () => {
+    expect(formatSource({ source: "github", repo: "obra/superpowers", ref: "v4.3.1" })).toBe(
+      "github:obra/superpowers@v4.3.1"
+    )
+  })
+
+  test("sha wins over ref when both are set", () => {
+    expect(
+      formatSource({ source: "github", repo: "obra/superpowers", ref: "v4.3.1", sha: "abc123" })
+    ).toBe("github:obra/superpowers@abc123")
+  })
+
+  test("url source pinned to a sha includes the sha", () => {
+    expect(formatSource({ source: "url", url: "https://x.git", sha: "abc123" })).toBe(
+      "git:https://x.git@abc123"
+    )
+  })
+
+  test("git-subdir source appends the pin after the path", () => {
+    expect(
+      formatSource({
+        source: "git-subdir",
+        url: "https://x.git",
+        path: "plugins/hookify",
+        ref: "main",
+      })
+    ).toBe("git:https://x.git#plugins/hookify@main")
+  })
+
+  test("npm source with version includes the version", () => {
+    expect(formatSource({ source: "npm", package: "foo", version: "1.0.0" })).toBe("npm:foo@1.0.0")
+  })
+})
+
 describe("marketplace.json", () => {
   test("the repo manifest decodes against the schema", async () => {
     const raw = await Bun.file(
