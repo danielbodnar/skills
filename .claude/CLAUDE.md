@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a Claude Code marketplace and plugin collection. It serves as the canonical source for references, snippets, rules, styleguides, and shareable configs.
+This is a Claude Code marketplace and plugin collection. It serves as the canonical source for references, snippets, rules, styleguides, and shareable configs. There are no git submodules — external plugins are referenced in `marketplace.json` via remote git sources and fetched by Claude Code at install time.
 
 ## Adding a New First-Party Plugin
 
@@ -21,23 +21,25 @@ Update `.claude-plugin/marketplace.json` to register the plugin.
 
 ## Adding an External Plugin
 
-Add as a git submodule:
+Register it in `.claude-plugin/marketplace.json` with a remote source — no files are vendored:
 
 ```bash
-git submodule add <url> external_plugins/<name>
+just add obra/superpowers
+just add anthropics/claude-plugins-official@plugins/hookify
 ```
 
-Then add an entry to `.claude-plugin/marketplace.json`.
+`org/repo` produces a `github` source; `org/repo@path` produces a `git-subdir` source. Leave `ref`/`sha`/`version` unset so installs track the latest upstream commit; add them only to pin.
 
-## Managing Vendor Submodules
+Supported source shapes (see `src/lib/schema.ts`):
+- relative path string (`./plugins/<name>`) for first-party plugins
+- `{ "source": "github", "repo": "org/repo" }`
+- `{ "source": "url", "url": "https://…​.git" }`
+- `{ "source": "git-subdir", "url": "…​.git", "path": "plugins/<name>" }`
+- `{ "source": "npm", "package": "…" }`
 
-Vendors are shallow submodules for reference only:
+## Reference Material
 
-```bash
-git submodule add --depth 1 <url> vendors/<category>/<name>
-```
-
-Set `shallow = true` in `.gitmodules` for the entry.
+Dev tools (oxc, biome, mise, just, devcontainers, …) are NOT vendored. They are installed via mise (`.mise.toml`) and documented in `references/dev-tools.md`. Related marketplaces are listed in `references/related-marketplaces.md`.
 
 ## Validation
 
@@ -47,9 +49,9 @@ just validate
 
 This checks:
 - `marketplace.json` schema validity
-- All plugin source paths resolve
-- All plugin.json manifests are valid
-- All submodules are initialized
+- Local plugin source paths resolve and have plugin.json manifests
+- Remote sources carry the required fields for their type
+- No duplicate plugin names
 
 ## CLI Development
 
@@ -57,9 +59,8 @@ The CLI is in `src/` using Effect-TS and Bun:
 
 - `src/index.ts` — entry point with command routing
 - `src/commands/` — one file per subcommand
-- `src/lib/schema.ts` — Effect-TS Schema definitions
+- `src/lib/schema.ts` — Effect-TS Schema definitions (incl. plugin source union)
 - `src/lib/marketplace.ts` — marketplace.json read/write
-- `src/lib/submodules.ts` — git submodule operations
 
 Build: `just build`
 Test: `just test`

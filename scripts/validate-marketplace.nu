@@ -1,5 +1,6 @@
 #!/usr/bin/env nu
-# Validates marketplace.json — checks plugin source paths and manifests
+# Validates marketplace.json — checks local plugin source paths, manifests,
+# and required fields on remote (github/url/git-subdir/npm) sources
 # Exit code 1 if any errors found
 
 def main [] {
@@ -19,17 +20,41 @@ def main [] {
   print $"  [ok]   marketplace.json \(($plugin_count) plugins\)"
 
   let results = ($marketplace.plugins | each { |plugin|
-    let source_path = ($root | path join $plugin.source)
-    let manifest_path = ($source_path | path join ".claude-plugin" "plugin.json")
+    let source = $plugin.source
 
-    if not ($source_path | path exists) {
-      print $"  [err]  ($plugin.name): source not found \(($plugin.source)\)"
-      { name: $plugin.name, status: "error" }
-    } else if not ($manifest_path | path exists) {
-      print $"  [warn] ($plugin.name): no plugin.json manifest"
-      { name: $plugin.name, status: "warning" }
+    if ($source | describe | str starts-with "string") {
+      # Local relative-path source
+      let source_path = ($root | path join $source)
+      let manifest_path = ($source_path | path join ".claude-plugin" "plugin.json")
+
+      if not ($source | str starts-with "./") {
+        print $"  [err]  ($plugin.name): local source must start with ./"
+        { name: $plugin.name, status: "error" }
+      } else if not ($source_path | path exists) {
+        print $"  [err]  ($plugin.name): source not found \(($source)\)"
+        { name: $plugin.name, status: "error" }
+      } else if not ($manifest_path | path exists) {
+        print $"  [warn] ($plugin.name): no plugin.json manifest"
+        { name: $plugin.name, status: "warning" }
+      } else {
+        { name: $plugin.name, status: "ok" }
+      }
     } else {
-      { name: $plugin.name, status: "ok" }
+      # Remote source object — check required fields per source type
+      let kind = $source.source?
+      let valid = match $kind {
+        "github" => (($source.repo? | default "") != ""),
+        "url" => (($source.url? | default "") != ""),
+        "git-subdir" => ((($source.url? | default "") != "") and (($source.path? | default "") != "")),
+        "npm" => (($source.package? | default "") != ""),
+        _ => false,
+      }
+      if $valid {
+        { name: $plugin.name, status: "ok" }
+      } else {
+        print $"  [err]  ($plugin.name): remote source missing required fields \(type: ($kind | default 'unknown')\)"
+        { name: $plugin.name, status: "error" }
+      }
     }
   })
 

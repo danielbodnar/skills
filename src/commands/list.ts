@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { readMarketplace } from "#lib/marketplace.ts"
-import type { PluginEntry } from "#lib/schema.ts"
+import { formatSource, type PluginEntry } from "#lib/schema.ts"
 
 interface ListOptions {
   glob?: string
@@ -15,7 +15,7 @@ const matchGlob = (name: string, pattern: string): boolean => {
   return regex.test(name)
 }
 
-const formatTable = (plugins: PluginEntry[], verbose: boolean): void => {
+const formatTable = (plugins: readonly PluginEntry[], verbose: boolean): void => {
   if (plugins.length === 0) {
     console.log("No plugins found.")
     return
@@ -26,7 +26,7 @@ const formatTable = (plugins: PluginEntry[], verbose: boolean): void => {
     console.log(`${"Name".padEnd(24)} ${"Category".padEnd(16)} ${"Source".padEnd(32)} Description`)
     console.log(`${"─".repeat(24)} ${"─".repeat(16)} ${"─".repeat(32)} ${"─".repeat(40)}`)
     for (const p of plugins) {
-      console.log(`${p.name.padEnd(24)} ${(p.category ?? "general").padEnd(16)} ${p.source.padEnd(32)} ${p.description}`)
+      console.log(`${p.name.padEnd(24)} ${(p.category ?? "general").padEnd(16)} ${formatSource(p.source).padEnd(32)} ${p.description}`)
     }
   } else {
     console.log(`${"Name".padEnd(24)} ${"Category".padEnd(16)} Description`)

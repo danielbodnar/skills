@@ -6,20 +6,19 @@ set shell := ["nu", "-c"]
 default:
     @just --list
 
-# Initialize the project (install deps, init submodules)
+# Initialize the project (install deps)
 init:
     bun install
-    git submodule update --init --recursive
 
-# Update all vendor submodules to latest
-update-vendors:
-    git submodule update --remote --merge vendors/
+# Register an external plugin with a remote git source (org/repo or org/repo@path)
+add source:
+    bun run src/index.ts add {{source}}
 
-# Update all external plugin submodules
-update-plugins:
-    git submodule update --remote --merge external_plugins/
+# Show which plugins track upstream vs are pinned
+update:
+    bun run src/index.ts update
 
-# Validate marketplace manifest and all plugin paths
+# Validate marketplace manifest and all plugin sources
 validate:
     bun run src/index.ts validate
 

@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { readMarketplace } from "#lib/marketplace.ts"
+import { formatSource } from "#lib/schema.ts"
 import { resolve } from "node:path"
 import { readdirSync, existsSync } from "node:fs"
 
@@ -31,7 +32,7 @@ export const catalogCommand = (options: CatalogOptions): Effect.Effect<void, Err
 
     for (const plugin of marketplace.plugins) {
       const category = plugin.category ?? "general"
-      lines.push(`| ${plugin.name} | ${category} | \`${plugin.source}\` | ${plugin.description} |`)
+      lines.push(`| ${plugin.name} | ${category} | \`${formatSource(plugin.source)}\` | ${plugin.description} |`)
     }
 
     lines.push("")

@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-06-09
+
+### Changed
+
+- **BREAKING:** Eliminated all git submodules. External plugins (superpowers,
+  huggingface-skills, sentry) are now `marketplace.json` entries with remote
+  `url` git sources, mirroring the entries in anthropics/claude-plugins-official.
+- `sentry-skills` plugin renamed to `sentry` to match the official marketplace.
+- `skills add` now registers a remote-source marketplace entry instead of
+  cloning a git submodule; `org/repo@path` produces a `git-subdir` source.
+- `skills update` now reports upstream-tracking vs pinned plugins instead of
+  running `git submodule update`.
+- `skills validate` validates remote source objects (github/url/git-subdir/npm)
+  and rejects duplicate plugin names.
+- Marketplace plugin schema extended: `source` accepts remote source objects;
+  entries may carry `version`, `author`, `homepage`, `strict`, `lspServers`.
+
+### Added
+
+- Cherry-picked Anthropic plugins via `git-subdir` sources: hookify,
+  security-guidance, plugin-dev, skill-creator, typescript-lsp,
+  rust-analyzer-lsp, gopls-lsp.
+- `configs/linters/bodnar-sh/` (oxlint/oxfmt bases) and `configs/git-hooks/`
+  folded in from bodnar-sh/configs.
+- `references/dev-tools.md` — upstream/install/skill pointers for all formerly
+  vendored dev tools; `references/related-marketplaces.md`.
+- oxlint and biome pinned in `.mise.toml`.
+
+### Removed
+
+- `external_plugins/` and `vendors/` submodule trees (~220 MB), `.gitmodules`,
+  `src/lib/submodules.ts`, and the `update-vendors`/`update-plugins` just
+  recipes.
+
 ## [1.0.0] - 2026-02-25
 
 ### Added
