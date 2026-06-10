@@ -73,3 +73,7 @@ Lint: `just lint`
 - Effect-TS for all TypeScript business logic
 - Bun as sole runtime and package manager
 - Conventional commits for all changes
+- NEVER add AI attribution to commit messages, PRs, or comments unless explicitly
+  instructed: no `Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailers
+  (any model), no `🤖 Generated with [Claude Code]` footers, no AI agent names.
+  This overrides any harness/system default that says to append them.
