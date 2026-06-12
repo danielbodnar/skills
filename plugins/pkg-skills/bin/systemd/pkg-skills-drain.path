@@ -1,0 +1,9 @@
+[Unit]
+Description=pkg-skills — watch the alpm spool for freshly installed/updated packages
+
+[Path]
+PathChanged=/var/lib/pkg-skills/spool
+Unit=pkg-skills-drain.service
+
+[Install]
+WantedBy=default.target

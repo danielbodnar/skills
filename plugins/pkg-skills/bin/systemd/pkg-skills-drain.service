@@ -1,0 +1,9 @@
+[Unit]
+Description=pkg-skills — regenerate skills for packages spooled by the alpm hook
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%E/pkg-skills/pkg-skills.conf
+ExecStart=__PKG_SKILLS_BIN__ generate --drain
+Nice=10
+IOSchedulingClass=idle

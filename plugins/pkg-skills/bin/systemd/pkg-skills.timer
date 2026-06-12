@@ -1,0 +1,11 @@
+[Unit]
+Description=pkg-skills — daily regeneration of package skills
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30min
+Persistent=true
+Unit=pkg-skills.service
+
+[Install]
+WantedBy=timers.target
