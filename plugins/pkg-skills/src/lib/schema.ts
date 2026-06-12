@@ -27,6 +27,8 @@ export const PackageSchema = z.object({
   version: z.string().default(""),
   description: z.string().default(""),
   homepage: z.string().default(""),
+  /** Resolved binary name when it differs from the package name (e.g. ripgrep -> rg). */
+  bin: z.string().optional(),
 });
 export type Package = z.infer<typeof PackageSchema>;
 

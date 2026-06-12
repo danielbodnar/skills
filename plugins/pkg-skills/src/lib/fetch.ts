@@ -9,8 +9,24 @@ import { join } from "node:path";
 import type { Package } from "#lib/schema.ts";
 import { packageCacheDir } from "#lib/paths.ts";
 import { capture, commandExists } from "#lib/managers/run.ts";
-import { detail as pacmanDetail } from "#lib/managers/pacman.ts";
+import { binaries as pacmanBinaries, detail as pacmanDetail } from "#lib/managers/pacman.ts";
 import { fetchGithubDocs, deriveRepo } from "#lib/github.ts";
+
+/**
+ * Resolve the binary a package provides. Package name wins when it is on
+ * PATH; otherwise pacman's file list disambiguates (ripgrep -> rg).
+ */
+export const resolveBin = async (pkg: Package): Promise<string> => {
+  const candidate = pkg.bin !== undefined && pkg.bin !== "" ? pkg.bin : (pkg.name.split("/").pop() ?? pkg.name);
+  if (commandExists(candidate)) return candidate;
+  if (pkg.manager === "pacman") {
+    const bins = await pacmanBinaries(pkg.name);
+    const onPath = bins.find((bin) => commandExists(bin));
+    if (onPath !== undefined) return onPath;
+    if (bins[0] !== undefined) return bins[0];
+  }
+  return candidate;
+};
 
 export interface FetchedSource {
   kind: "cli-help" | "man" | "tldr" | "github-readme" | "github-releases" | "changelog" | "links";
@@ -54,6 +70,8 @@ const tldrPage = async (bin: string): Promise<string> => {
 
 /** Enrich a package with description/homepage from its manager when missing. */
 export const hydrate = async (pkg: Package): Promise<Package> => {
+  const bin = await resolveBin(pkg);
+  pkg = { ...pkg, bin };
   if (pkg.manager === "pacman" && (pkg.description === "" || pkg.homepage === "")) {
     const info = await pacmanDetail(pkg.name);
     return { ...pkg, description: pkg.description || info.description, homepage: pkg.homepage || info.homepage };
@@ -88,8 +106,8 @@ export const fetchAll = async (pkg: Package, options: { github: boolean }): Prom
   const now = (): string => new Date().toISOString();
   const sources: FetchedSource[] = [];
 
-  // The binary name usually matches the package; fall back gracefully when not.
-  const bin = pkg.name.split("/").pop() ?? pkg.name;
+  // Use the resolved binary (set by hydrate); fall back to the package name.
+  const bin = pkg.bin !== undefined && pkg.bin !== "" ? pkg.bin : (pkg.name.split("/").pop() ?? pkg.name);
 
   const help = await cliHelp(bin);
   if (help !== "") sources.push({ kind: "cli-help", provenance: "fetched", path: write(dir, "cli-help.txt", help), fetchedAt: now() });

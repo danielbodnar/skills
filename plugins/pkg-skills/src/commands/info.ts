@@ -84,7 +84,7 @@ export const meta = async (name: string | undefined): Promise<void> => {
       {
         SKILL_NAME: skillNameFor(pkg.name, config.prefix),
         PKG_NAME: pkg.name,
-        PKG_BIN: pkg.name.split("/").pop() ?? pkg.name,
+        PKG_BIN: pkg.bin !== undefined && pkg.bin !== "" ? pkg.bin : (pkg.name.split("/").pop() ?? pkg.name),
         PKG_VERSION: pkg.version,
         PKG_HOMEPAGE: pkg.homepage,
         PKG_REPO: repo === null ? "" : `https://github.com/${repo}`,

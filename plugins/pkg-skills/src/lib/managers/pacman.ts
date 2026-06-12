@@ -25,3 +25,13 @@ export const detail = async (name: string): Promise<{ description: string; homep
   };
   return { description: field("Description"), homepage: field("URL") };
 };
+
+/** Executables a package installs (basenames under bin dirs), e.g. ripgrep -> [rg]. */
+export const binaries = async (name: string): Promise<string[]> => {
+  const out = await capture(["pacman", "-Qlq", name]);
+  return out
+    .split("\n")
+    .filter((path) => /\/s?bin\/[^/]+$/.test(path))
+    .map((path) => path.split("/").pop() ?? "")
+    .filter((bin) => bin !== "");
+};

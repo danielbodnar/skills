@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "pkg-ripgrep": {
+      "source": "/home/bodnar/.claude/jobs/8b5abc84/tmp/sandbox/data/pkg-skills/generated/pkg-ripgrep",
+      "sourceType": "local",
+      "computedHash": "661ec7e0084f17601ec4f2ac2dc304171762bb8c5e88d52cc2d163e5c541da4b"
+    }
+  }
+}

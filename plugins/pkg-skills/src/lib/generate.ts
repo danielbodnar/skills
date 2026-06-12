@@ -2,7 +2,7 @@
  * Skill generation pipeline: hydrate → fetch → render templates → validate →
  * `skills add` → mirror to ~/.claude → record state.
  */
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Config, Package, SkillMeta } from "#lib/schema.ts";
@@ -28,7 +28,7 @@ export interface GenerateResult {
 
 const buildVars = (pkg: Package, skill: string): Record<string, string> => {
   const repo = deriveRepo(pkg.homepage);
-  const bin = pkg.name.split("/").pop() ?? pkg.name;
+  const bin = pkg.bin !== undefined && pkg.bin !== "" ? pkg.bin : (pkg.name.split("/").pop() ?? pkg.name);
   return {
     SKILL_NAME: skill,
     PKG_NAME: pkg.name,
@@ -73,7 +73,10 @@ export const generateSkill = async (raw: Package, config: Config): Promise<Gener
 
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
-  renderDir(templatesDir(), outDir, buildVars(pkg, skill), packageCacheDir(pkg.manager, pkg.name));
+  const written = renderDir(templatesDir(), outDir, buildVars(pkg, skill), packageCacheDir(pkg.manager, pkg.name));
+  for (const file of written) {
+    if (file.endsWith(".sh") || file.endsWith(".nu")) chmodSync(file, 0o755);
+  }
 
   const meta: SkillMeta = {
     skill,
