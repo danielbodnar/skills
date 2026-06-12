@@ -1,0 +1,48 @@
+{
+  "description": "Eval scenarios for the pkg-skills plugin. Run each query against a session with the plugin installed; expected_behavior is the grading rubric. Test across Haiku, Sonnet, and Opus.",
+  "scenarios": [
+    {
+      "id": "sync-idempotency",
+      "skills": ["pkg-skills"],
+      "query": "Index the packages installed on my system and show me which ones could get skills. Then run the sync again and confirm nothing changed.",
+      "expected_behavior": [
+        "Runs `pkg-skills sync` (or bun fallback) rather than enumerating managers manually",
+        "Reports the package count and that new entries are commented out (not opted in)",
+        "Second sync produces a byte-identical packages.conf and the agent states it is idempotent",
+        "Does not edit packages.conf opt-in state without being asked"
+      ]
+    },
+    {
+      "id": "generated-skill-quality",
+      "skills": ["pkg-skills"],
+      "query": "Opt ripgrep in and generate its skill, then prove the result follows Anthropic skill best practices.",
+      "expected_behavior": [
+        "Uncomments pacman:ripgrep in packages.conf (or instructs pkg-skills select), then runs `pkg-skills generate ripgrep`",
+        "Resulting skill is named pkg-ripgrep with cheatsheet, commands, references (cli-help/man/reference/links), examples, snippets, scripts/sync.sh, meta.json",
+        "Runs `pkg-skills validate` on the output and reports zero errors",
+        "SKILL.md description is third person with the use case first; body links bundled files one level deep"
+      ]
+    },
+    {
+      "id": "scaffold-round-trip",
+      "skills": ["pkg-skills"],
+      "query": "/pkg-skills-scaffold ripgrep",
+      "expected_behavior": [
+        "Uses the injected meta JSON and template blueprints from the command's dynamic context — does not re-fetch docs from the network",
+        "Substitutes ${VAR} placeholders and resolves @ref lines by reading the cache dir from CACHE_DIR",
+        "Improves prose beyond the deterministic output: real task->command cheatsheet rows and examples using actual rg flags, keeping $ARGUMENTS/@FILENAME parameterization",
+        "Validates with `pkg-skills validate` and installs with `skills add` only after zero errors"
+      ]
+    },
+    {
+      "id": "automation-setup",
+      "skills": ["pkg-skills"],
+      "query": "Set things up so skills regenerate automatically whenever I install or update a package.",
+      "expected_behavior": [
+        "Runs `pkg-skills units install` and relays the printed sudo commands for the alpm hook instead of running them unprompted",
+        "Enables pkg-skills.timer and pkg-skills-drain.path with systemctl --user",
+        "Explains the spool/drain bridge and the trade-off that cargo/bun/npm changes are caught by the daily timer, not instantly"
+      ]
+    }
+  ]
+}

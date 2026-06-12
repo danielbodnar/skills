@@ -60,7 +60,10 @@ const manPage = async (bin: string): Promise<string> => {
   });
   const text = await new Response(proc.stdout).text();
   await proc.exited;
-  return proc.exitCode === 0 ? text.replaceAll(/.\x08/g, "") : "";
+  // Strip man overstrike sequences (char + backspace) left by some pagers.
+  // oxlint-disable-next-line no-control-regex -- backspace matching is the point here
+  const overstrike = new RegExp(".\\u0008", "g");
+  return proc.exitCode === 0 ? text.replaceAll(overstrike, "") : "";
 };
 
 const tldrPage = async (bin: string): Promise<string> => {
