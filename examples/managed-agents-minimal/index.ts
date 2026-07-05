@@ -15,9 +15,9 @@ async function main(): Promise<void> {
     environment_id: ENVIRONMENT_ID,
     title: "managed-agents-minimal demo",
   });
-  console.log(`Session:  ${session.id}`);
-  console.log(`Trace:    https://platform.claude.com/workspaces/default/sessions/${session.id}`);
-  console.log(`Sending:  ${message}\n`);
+  console.log("Session: ", session.id);
+  console.log("Trace:   ", "https://platform.claude.com/workspaces/default/sessions/" + session.id);
+  console.log("Sending: ", message, "\n");
 
   // Open the stream before sending — the stream only delivers events
   // emitted after it is opened.
@@ -37,7 +37,7 @@ async function main(): Promise<void> {
         break;
 
       case "session.error":
-        console.error(`\n[session error] ${JSON.stringify(event)}`);
+        console.error("\n[session error]", JSON.stringify(event));
         process.exit(1);
 
       case "session.status_terminated":
@@ -62,9 +62,9 @@ try {
   if (error instanceof Anthropic.AuthenticationError) {
     console.error("Authentication failed — set ANTHROPIC_API_KEY or run `ant auth login`.");
   } else if (error instanceof Anthropic.NotFoundError) {
-    console.error(`Agent or environment not found: ${error.message}`);
+    console.error("Agent or environment not found:", error.message);
   } else if (error instanceof Anthropic.APIError) {
-    console.error(`API error${error.status ? ` (${error.status})` : ""}: ${error.message}`);
+    console.error("API error", error.status ?? "", "-", error.message);
   } else {
     console.error(error);
   }
