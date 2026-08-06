@@ -97,8 +97,10 @@ export const generateSkill = async (raw: Package, config: Config): Promise<Gener
   }
 
   const installed = await runSkillsAdd(outDir, config.skills_add_args);
-  if (config.mirror_claude_dirs) mirrorToClaude(outDir, pkg);
-  markGenerated(pkg, skill);
+  if (installed) {
+    if (config.mirror_claude_dirs) mirrorToClaude(outDir, pkg);
+    markGenerated(pkg, skill);
+  }
 
   return { skill, dir: outDir, installed, findings: findings.map((f) => `${f.level}: ${f.rule}: ${f.message}`) };
 };
