@@ -25,8 +25,10 @@ export const inlineRefs = (text: string, baseDir: string): string =>
     .map((line) => {
       const match = /^@([\w./-]+)\s*$/.exec(line.trim());
       if (match === null) return line;
-      const target = join(baseDir, match[1] ?? "");
-      if (!existsSync(target)) return `_(not available: ${match[1]})_`;
+      const ref = match[1] ?? "";
+      if (ref.startsWith("/") || ref.split("/").includes("..")) return `_(invalid ref: ${ref})_`;
+      const target = join(baseDir, ref);
+      if (!existsSync(target)) return `_(not available: ${ref})_`;
       return readFileSync(target, "utf8").trimEnd();
     })
     .join("\n");
