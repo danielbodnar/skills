@@ -1,0 +1,10 @@
+{
+  "name": "pkg-skills",
+  "version": "0.1.0",
+  "description": "Index installed packages (pacman, cargo, bun, npm, mise, and more) and auto-generate per-package Claude skills with docs, cheatsheets, parameterized examples, and snippets. Includes systemd timers and pacman hooks for hands-free updates.",
+  "author": {
+    "name": "Daniel Bodnar",
+    "email": "daniel.bodnar@gmail.com"
+  },
+  "keywords": ["packages", "skills-generator", "pacman", "cargo", "bun", "systemd", "alpm", "automation", "documentation"]
+}

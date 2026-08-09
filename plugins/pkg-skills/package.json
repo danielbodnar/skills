@@ -1,0 +1,36 @@
+{
+  "name": "@danielbodnar/pkg-skills",
+  "version": "0.1.0",
+  "description": "Index installed packages and auto-generate per-package Claude skills.",
+  "type": "module",
+  "bin": {
+    "pkg-skills": "./dist/pkg-skills"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "imports": {
+    "#commands/*": "./src/commands/*",
+    "#lib/*": "./src/lib/*"
+  },
+  "files": ["dist/", "src/", "templates/", "bin/", "LICENSE"],
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build --compile --outfile ./dist/pkg-skills src/index.ts",
+    "test": "bun test",
+    "lint": "bunx oxlint src/",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  },
+  "author": {
+    "name": "Daniel Bodnar",
+    "email": "daniel.bodnar@gmail.com"
+  },
+  "license": "MIT"
+}

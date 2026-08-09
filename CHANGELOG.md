@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **pkg-skills plugin** (`plugins/pkg-skills/`): indexes installed packages
+  across pacman/cargo/bun/npm/pnpm/yarn/mise/go/pipx/deno/uv and generates a
+  Claude skill per opted-in package (cheatsheet, command spec blocks, curated
+  reference, raw help/man/changelog artifacts, parameterized examples,
+  snippets, refresh script, machine-readable meta.json).
+  - Opt-in via `$XDG_CONFIG_HOME/pkg-skills/packages.conf` (synced
+    commented-out by default; `pkg-skills select` space-to-toggle TUI).
+  - Executable `templates/` directory (`${VAR}` + `@ref`, no template engine)
+    rendered identically by a deterministic TS resolver and the
+    `/pkg-skills-scaffold` slash command.
+  - Fail-closed validator enforcing Anthropic skill best practices (naming
+    reserved words, description limits, body length, one-level refs, TOC).
+  - systemd user timer + pacman (alpm) hook with spool/drain bridge:
+    `systemctl --user enable --now pkg-skills.timer pkg-skills-drain.path`.
+
 ## [2.0.0] - 2026-06-09
 
 ### Changed

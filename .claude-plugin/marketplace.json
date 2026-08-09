@@ -30,6 +30,12 @@
       "category": "devops"
     },
     {
+      "name": "pkg-skills",
+      "description": "Index installed packages (pacman, cargo, bun, npm, mise, and more) and auto-generate per-package Claude skills with docs, cheatsheets, parameterized examples, and snippets. Systemd timers and pacman hooks keep them current.",
+      "source": "./plugins/pkg-skills",
+      "category": "automation"
+    },
+    {
       "name": "typescript-lsp",
       "description": "TypeScript/JavaScript language server for enhanced code intelligence",
       "author": {

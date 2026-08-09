@@ -1,0 +1,15 @@
+[Unit]
+Description=pkg-skills — regenerate Claude skills for changed packages
+Documentation=https://github.com/danielbodnar/skills/tree/main/plugins/pkg-skills
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%E/pkg-skills/pkg-skills.conf
+ExecStart=__PKG_SKILLS_BIN__ generate --changed-only
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=default.target

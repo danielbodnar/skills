@@ -1,0 +1,16 @@
+# /etc/pacman.d/hooks/pkg-skills.hook
+# Appends every installed/upgraded package name to the pkg-skills spool.
+# A user-level systemd .path unit watches the spool and regenerates skills
+# for any spooled package the user has opted in.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = *
+
+[Action]
+Description = pkg-skills: spooling changed packages for skill regeneration
+When = PostTransaction
+NeedsTargets
+Exec = /bin/sh -c 'mkdir -p /var/lib/pkg-skills; cat >> /var/lib/pkg-skills/spool; chmod 0666 /var/lib/pkg-skills/spool'
