@@ -1,6 +1,6 @@
 # Skills Marketplace
 
-A centralized collection of Claude Code plugins, skills, references, and configs. No git submodules — external plugins are catalog entries with remote git sources, fetched by Claude Code at install time.
+A centralized collection of Claude Code plugins, skills, references, and configs. External plugins are catalog entries with remote git sources, fetched by Claude Code at install time. The one git submodule, `kb/`, holds the knowledge base (references, snippets, standards).
 
 ## Quick Start
 
@@ -51,7 +51,15 @@ See `references/related-marketplaces.md` for the official and community marketpl
 
 ### References & Snippets
 
-Canonical source for `~/.claude/references/` and `~/.claude/snippets/`. Covers 65+ tools including Effect-TS, Bun, Astro, Vue, Cloudflare Workers, Rust, and more. Dev tools formerly vendored as submodules are documented in `references/dev-tools.md` and version-managed via `.mise.toml`.
+The knowledge base lives in [`danielbodnar/ai`](https://github.com/danielbodnar/ai), checked out here as the `kb/` submodule. `references/`, `snippets/` and `standards/` are symlinks into `kb/`, so they're empty until the submodule is initialized:
+
+```bash
+git clone --recurse-submodules https://github.com/danielbodnar/skills.git
+# or, in an existing clone
+git submodule update --init
+```
+
+Edit these files in the `ai` repo, then bump the submodule here with `git submodule update --remote kb`. `skills sync` links them into `~/.claude/`. Dev tools formerly vendored as submodules are documented in `references/dev-tools.md` and version-managed via `.mise.toml`.
 
 ### Configs
 
@@ -74,9 +82,10 @@ skills/
 ├── plugins/                 # First-party plugins
 ├── rules/                   # Global rules
 ├── styleguides/             # Code style guides
-├── standards/               # Coding standards
-├── references/              # Tool/framework reference docs
-├── snippets/                # Code examples and patterns
+├── kb/                      # Submodule: danielbodnar/ai (knowledge base)
+├── standards -> kb/standards    # Coding standards
+├── references -> kb/references  # Tool/framework reference docs
+├── snippets -> kb/snippets      # Code examples and patterns
 ├── configs/                 # Shareable configuration files
 ├── scripts/                 # Nushell utility scripts
 └── justfile                 # Task runner
